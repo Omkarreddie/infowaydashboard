@@ -197,10 +197,13 @@ class InfowayApp():
             self.view_summary()
         elif st.session_state.get("page")=="Grn_data":
             st.subheader("GRN DATA")
+            self.GRN()
         elif st.session_state.get("page") == "lpo_grn_gross_amount":
             st.subheader("LPO GRN GROSS AMOUNT")
+            self.lpo_grn_gross_amount()
         elif st.session_state.get("page") == "lpo_grn_net_values":
             st.subheader("LPO GRN NET VALUES")
+            self.lpo_grn_net_values()
 
     def manage_responsibilities(self):
         st.header("Manage Responsibilities")
@@ -398,7 +401,20 @@ class InfowayApp():
         if not os.path.exists("data/grn_data.csv"):
             st.error("csv file not exist")
             return
-        df=pd.read_csv("data/grn_data.csv")    
+        df=pd.read_csv("data/grn_data.csv")  
+        st.dataframe(df)
+    def lpo_grn_gross_amount(self):
+        if not os.path.exists("data/lpo_grn_gross_amount.csv"):
+            st.error("csv file not exists")
+            return  
+        df=pd.read_csv("data/lpo_grn_gross_amount.csv")
+        st.dataframe(df)
+    def lpo_grn_net_values(self):
+        if not os.path.exists("data/lpo_grn_net_values.csv"):
+            st.error("lpo_grn_net_values")
+            return
+        df=pd.read_csv("data/lpo_grn_net_values.csv")
+        st.dataframe(df)
     def view_summary(self):
         st.write("Purchase Summary")
         if not os.path.exists("data/view_summary.csv"):
