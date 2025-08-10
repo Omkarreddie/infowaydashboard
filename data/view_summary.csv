@@ -1,0 +1,8 @@
+Date,Supplier,Category,Item,Quantity,Rate,Amount,Status
+2025-08-01,ABC Traders,Electronics,Monitor,10,18000,180000,Delivered
+2025-08-02,Office Mart,Office Supplies,Printer Paper,50,150,7500,Delivered
+2025-08-03,Hardware Hub,Hardware,Keyboard,20,700,14000,Pending
+2025-08-03,Hardware Hub,Hardware,Mouse,25,500,12500,Delivered
+2025-08-04,Tech Store,Electronics,Laptop,5,55000,275000,Shipped
+2025-08-05,Furniture World,Furniture,Office Chair,8,4500,36000,Delivered
+2025-08-06,ABC Traders,Electronics,Webcam,15,2500,37500,Cancelled
