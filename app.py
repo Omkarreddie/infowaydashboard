@@ -141,11 +141,14 @@ class InfowayApp():
 
         if st.session_state.purchase_open:
             if st.session_state.role in ["admin", "purchasemanager", "purchaseasst1","purchaseasst2"]:
-                if st.sidebar.button("📊 View Purchase Chart"):
+                if st.sidebar.button("LPO DATA"):
                     st.session_state.page = "purchase_dashboard"
-            if st.session_state.role in ["admin", "purchasemanager"]:
-                if st.sidebar.button("📈 View Summary"):
-                    st.session_state.page = "purchase_summary"
+                if st.sidebar.button("GRN DATA"):
+                    st.session_state.page = "Grn_data"
+                if st.sidebar.button("LPO GRN GROSS AMOUNT"):
+                    st.session_state.page = "lpo_grn_gross_amount"
+                if st.sidebar.button("LPO GRN NET VALUES"):
+                    st.session_state.page = "lpo_grn_net_values"
 
         if "admin_menu_open" not in st.session_state:
             st.session_state.admin_menu_open = False
@@ -192,6 +195,12 @@ class InfowayApp():
         elif st.session_state.get("page") == "purchase_summary":
             st.subheader("Purchase Summary")
             self.view_summary()
+        elif st.session_state.get("page")=="Grn_data":
+            st.subheader("GRN DATA")
+        elif st.session_state.get("page") == "lpo_grn_gross_amount":
+            st.subheader("LPO GRN GROSS AMOUNT")
+        elif st.session_state.get("page") == "lpo_grn_net_values":
+            st.subheader("LPO GRN NET VALUES")
 
     def manage_responsibilities(self):
         st.header("Manage Responsibilities")
@@ -380,13 +389,16 @@ class InfowayApp():
 
     def purchase(self):
         st.write("Purchase dashboard")
-        if not os.path.exists("data/purchase.csv"):
+        if not os.path.exists("data/lpo_data.csv"):
             st.error("Csv file not found")
             return
-        df = pd.read_csv("data/purchase.csv")
+        df = pd.read_csv("data/lpo_data.csv")
         st.dataframe(df)
-        st.line_chart(df.set_index("Date")["Amount"])
-    
+    def GRN(self):
+        if not os.path.exists("data/grn_data.csv"):
+            st.error("csv file not exist")
+            return
+        df=pd.read_csv("data/grn_data.csv")    
     def view_summary(self):
         st.write("Purchase Summary")
         if not os.path.exists("data/view_summary.csv"):
