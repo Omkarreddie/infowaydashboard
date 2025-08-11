@@ -4,8 +4,9 @@ import pandas as pd
 from PIL import Image
 import pickle
 import hashlib
-import matplotlib.pyplot as py
+import matplotlib.pyplot as plt
 import PyPDF2
+import numpy as np
 
 # -------------------------- Utility Functions --------------------------
 def hash_password(password):
@@ -116,33 +117,34 @@ class InfowayApp():
 
         st.header("Admin Panel")
         st.sidebar.markdown("---")
-        st.sidebar.markdown("### 📦 Sales Module")
+       # st.sidebar.markdown("### 📦 Sales Module")
 
-        if "sales_module_open" not in st.session_state:
-            st.session_state.sales_module_open = False
-        if st.sidebar.button("📦 Sales Dashboard"):
-            st.session_state.sales_module_open = not st.session_state.sales_module_open
-            st.session_state.page = None
+        #if "sales_module_open" not in st.session_state:
+         #   st.session_state.sales_module_open = False
+        #if st.sidebar.button("📦 Sales Dashboard"):
+         #   st.session_state.sales_module_open = not st.session_state.sales_module_open
+          #  st.session_state.page = None
 
-        if st.session_state.sales_module_open:
-            if st.session_state.role in ["admin", "salesmanager", "salesman1","salesman2"]:
-                if st.sidebar.button("📊 View Sales Chart"):
-                    st.session_state.page = "sales_dashboard"
-            if st.session_state.role in ["admin", "salesmanager"]:
-                if st.sidebar.button("📈 View Budgeting"):
-                    st.session_state.page = "budgeting"
+        #if st.session_state.sales_module_open:
+         #   if st.session_state.role in ["admin", "salesmanager", "salesman1","salesman2"]:
+          #      if st.sidebar.button("📊 View Sales Chart"):
+           #         st.session_state.page = "sales_dashboard"
+            #if st.session_state.role in ["admin", "salesmanager"]:
+             #   if st.sidebar.button("📈 View Budgeting"):
+              #      st.session_state.page = "budgeting"
 
-        st.sidebar.markdown("### 🛒 Purchase Module")
         if "purchase_open" not in st.session_state:
             st.session_state.purchase_open = False
-        if st.sidebar.button("📦 Purchase Dashboard"):
-            st.session_state.purchase_open = not st.session_state.purchase_open
-            st.session_state.page = None
+        if st.sidebar.button("📦 Purchase Module"):
+           st.session_state.purchase_open = not st.session_state.purchase_open
+           st.session_state.page = None
 
         if st.session_state.purchase_open:
             if st.session_state.role in ["admin", "purchasemanager", "purchaseasst1","purchaseasst2"]:
+                if st.sidebar.button("Purchase Dashboard"):
+                    st.session_state.page="purchase_dashborad"
                 if st.sidebar.button("LPO DATA"):
-                    st.session_state.page = "purchase_dashboard"
+                    st.session_state.page = "Lpo_data"
                 if st.sidebar.button("GRN DATA"):
                     st.session_state.page = "Grn_data"
                 if st.sidebar.button("LPO GRN GROSS AMOUNT"):
@@ -183,18 +185,18 @@ class InfowayApp():
             self.manage_roles()
         elif st.session_state.get("page") == "users":
             self.manage_users()
-        elif st.session_state.get("page") == "sales_dashboard":
-            st.subheader("📊 Sales Dashboard")
-            self.show_sales_chart()
-        elif st.session_state.get("page") == "budgeting":
-            st.subheader("📈 Budgeting Section")
-            self.show_budgeting_section()
-        elif st.session_state.get("page") == "purchase_dashboard":
+       # elif st.session_state.get("page") == "sales_dashboard":
+        #    st.subheader("📊 Sales Dashboard")
+         #   self.show_sales_chart()
+        #elif st.session_state.get("page") == "budgeting":
+         #   st.subheader("📈 Budgeting Section")
+          #  self.show_budgeting_section()
+        elif st.session_state.get("page") == "purchase_dashborad":
             st.subheader("Purchase Dashboard")
+            self.purchase_dashboard()
+        elif st.session_state.get("page") == "Lpo_data":
+            st.subheader("LPO DATA")
             self.purchase()
-        elif st.session_state.get("page") == "purchase_summary":
-            st.subheader("Purchase Summary")
-            self.view_summary()
         elif st.session_state.get("page")=="Grn_data":
             st.subheader("GRN DATA")
             self.GRN()
@@ -340,12 +342,12 @@ class InfowayApp():
                 st.subheader("Your Responsibilities")
                 for resp in responsibilities:
                     st.success(f"✅ {resp}")
-            if "View Sales Chart" in responsibilities:
-                st.subheader("Sales Dashboard")
-                self.show_sales_chart()
-            if "Budgeting Access" in responsibilities:
-                st.subheader("Budgeting Section")
-                self.show_budgeting_section()
+           # if "View Sales Chart" in responsibilities:
+            #    st.subheader("Sales Dashboard")
+             #   self.show_sales_chart()
+            #if "Budgeting Access" in responsibilities:
+             #   st.subheader("Budgeting Section")
+              #  self.show_budgeting_section()
             if "View Purchase Chart" in responsibilities:
                 st.subheader("Purchase Dashboard")
                 self.purchase()
@@ -365,64 +367,262 @@ class InfowayApp():
         st.success("Logged out successfully!")
         st.rerun()
 
-    def show_sales_chart(self):
-        st.subheader("Sales Data Charts")
-        if not os.path.exists("data/sales_data.csv"):
-            st.error("Your file does not exist")
-            return
-        df = pd.read_csv("data/sales_data.csv")
-        st.dataframe(df)
-        st.bar_chart(data=df, x="City", y="Total")
-        data = {'Name': ['Omkar', 'Lakshman', 'Ajay'], 'Sales': [24, 25, 23], 'Location': ['Nellore', 'Chennai', 'Hyderabad']}
-        df_chart = pd.DataFrame(data)
-        st.title("Sales")
-        fig, ax = py.subplots()
-        ax.bar(df_chart["Name"], df_chart["Sales"], color="blue")
-        ax.set_title("Sales by Person")
-        ax.set_xlabel("Name")
-        ax.set_ylabel("Sales")
-        st.pyplot(fig)
+    #def show_sales_chart(self):
+        #st.subheader("Sales Data Charts")
+        #if not os.path.exists("data/sales_data.csv"):
+         #   st.error("Your file does not exist")
+          #  return
+        #df = pd.read_csv("data/sales_data.csv")
+        #st.dataframe(df)
+        #st.bar_chart(data=df, x="City", y="Total")
+        #data = {'Name': ['Omkar', 'Lakshman', 'Ajay'], 'Sales': [24, 25, 23], 'Location': ['Nellore', 'Chennai', 'Hyderabad']}
+        #df_chart = pd.DataFrame(data)
+        #st.title("Sales")
+        #fig, ax = plt.subplots()
+        #ax.bar(df_chart["Name"], df_chart["Sales"], color="blue")
+        #ax.set_title("Sales by Person")
+        #ax.set_xlabel("Name")
+        #ax.set_ylabel("Sales")
+        #st.pyplot(fig)
 
-    def show_budgeting_section(self):
-        st.write("📋 This is the budgeting area.")
-        budget_data = {"Department": ["Sales", "Marketing", "HR"], "Budget": [150000, 100000, 80000]}
-        df_budget = pd.DataFrame(budget_data)
-        st.dataframe(df_budget)
-        st.bar_chart(df_budget.set_index("Department"))
+    #def show_budgeting_section(self):
+     #   st.write("📋 This is the budgeting area.")
+      #  budget_data = {"Department": ["Sales", "Marketing", "HR"], "Budget": [150000, 100000, 80000]}
+       # df_budget = pd.DataFrame(budget_data)
+        #st.dataframe(df_budget)
+        #st.bar_chart(df_budget.set_index("Department"))
+    def purchase_dashboard(self):
+        st.title("Dashboards of Purchase module")
+        self.purchase()
+        self.GRN()
+        self.lpo_grn_gross_amount()
+        self.lpo_grn_net_values()
+        
+    def load_purchase_data(self,file_path="data/lpo_data.csv"):
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Purchase file not found: {file_path}")
+
+        # Try reading as CSV first
+        try:
+            df = pd.read_csv(file_path)
+        except Exception:
+            # If CSV read fails, try tab-delimited
+            df = pd.read_csv(file_path, sep="\t")
+
+        # If only 1 column, maybe it's tab or space separated
+        if len(df.columns) == 1:
+            # Try again with tab separation
+            try:
+                df = pd.read_csv(file_path, sep="\t")
+            except Exception:
+                # If still not right, try whitespace separation
+                df = pd.read_csv(file_path, delim_whitespace=True)
+
+        # Clean column names: strip spaces, remove special chars
+        df.columns = df.columns.str.strip()
+        
+        
+        # Check if 'Project' column exists
+        if 'Project' not in df.columns:
+            raise KeyError(f"'Project' column not found after cleanup. Found columns: {df.columns.tolist()}")
+
+        return df
 
     def purchase(self):
-        st.write("Purchase dashboard")
-        if not os.path.exists("data/lpo_data.csv"):
-            st.error("Csv file not found")
-            return
-        df = pd.read_csv("data/lpo_data.csv")
-        st.dataframe(df)
+        st.title("📊 Purchase Dashboard")
+
+        df = self.load_purchase_data()
+
+        # Create a proper Date column from Year + Month
+        df["Date"] = pd.to_datetime(df["Year"].astype(str) + "-" + df["Month"].astype(str) + "-01")
+
+        # Sidebar filters
+        projects = st.multiselect(
+            "Select Projects",
+            options=sorted(df["Project"].unique()),
+            default=sorted(df["Project"].unique())
+        )
+
+        view_mode = st.radio(
+            "View Mode",
+            options=["Yearly", "Monthly"],
+            index=0,
+            horizontal=True,key="radio"
+        )
+
+        # Apply project filter
+        df_filtered = df[df["Project"].isin(projects)]
+
+        if view_mode == "Yearly":
+            df_grouped = df_filtered.groupby("Year", as_index=False)["Amount"].sum()
+            fig, ax = plt.subplots()
+            ax.bar(df_grouped["Year"].astype(str), df_grouped["Amount"])
+            ax.set_title("Yearly Purchase Amount")
+            ax.set_xlabel("Year")
+            ax.set_ylabel("Amount")
+            st.pyplot(fig)
+
+        elif view_mode == "Monthly":
+            # Let user choose year for monthly view
+            selected_year = st.selectbox("Select Year", sorted(df_filtered["Year"].unique()))
+            df_year = df_filtered[df_filtered["Year"] == selected_year]
+            df_grouped = df_year.groupby("Month", as_index=False)["Amount"].sum()
+            fig, ax = plt.subplots()
+            ax.bar(df_grouped["Month"].astype(str), df_grouped["Amount"])
+            ax.set_title(f"Monthly Purchase Amount - {selected_year}")
+            ax.set_xlabel("Month")
+            ax.set_ylabel("Amount")
+            st.pyplot(fig)
     def GRN(self):
+        st.subheader("GOOD RECIEVE NOTE DATA")
         if not os.path.exists("data/grn_data.csv"):
-            st.error("csv file not exist")
-            return
-        df=pd.read_csv("data/grn_data.csv")  
-        st.dataframe(df)
+            raise FileNotFoundError(f"Purchase file not found: {"data/grn_data.csv"}")
+
+        # Try reading as CSV first
+        try:
+            df = pd.read_csv("data/grn_data.csv")
+        except Exception:
+            # If CSV read fails, try tab-delimited
+            df = pd.read_csv("data/grn_data.csv", sep="\t")
+
+        # If only 1 column, maybe it's tab or space separated
+        if len(df.columns) == 1:
+            # Try again with tab separation
+            try:
+                df = pd.read_csv("data/grn_data.csv", sep="\t")
+            except Exception:
+                # If still not right, try whitespace separation
+                df = pd.read_csv("data/grn_data.csv", delim_whitespace=True)
+
+        # Clean column names: strip spaces, remove special chars
+        df.columns = df.columns.str.strip()
+        
+        # Check if 'Project' column exists
+        if 'Project' not in df.columns:
+            raise KeyError(f"'Project' column not found after cleanup. Found columns: {df.columns.tolist()}")
+
+        df["Date"] = pd.to_datetime(df["Year"].astype(str) + "-" + df["Month"].astype(str) + "-01")
+
+        # Sidebar filters
+        projects = st.multiselect(
+            "Select Projects",
+            options=sorted(df["Project"].unique()),
+            default=sorted(df["Project"].unique())
+        )
+
+        view_mode = st.radio(
+            "View Mode",
+            options=["Yearly", "Monthly"],
+            index=0,
+            horizontal=True
+        )
+
+        # Apply project filter
+        df_filtered = df[df["Project"].isin(projects)]
+
+        if view_mode == "Yearly":
+            df_grouped = df_filtered.groupby("Year", as_index=False)["Amount"].sum()
+            fig, ax = plt.subplots()
+            ax.bar(df_grouped["Year"].astype(str), df_grouped["Amount"])
+            ax.set_title("Yearly Purchase Amount")
+            ax.set_xlabel("Year")
+            ax.set_ylabel("Amount")
+            st.pyplot(fig)
+
+        elif view_mode == "Monthly":
+            # Let user choose year for monthly view
+            selected_year = st.selectbox("Select Year", sorted(df_filtered["Year"].unique()))
+            df_year = df_filtered[df_filtered["Year"] == selected_year]
+            df_grouped = df_year.groupby("Month", as_index=False)["Amount"].sum()
+            fig, ax = plt.subplots()
+            ax.bar(df_grouped["Month"].astype(str), df_grouped["Amount"])
+            ax.set_title(f"Monthly Purchase Amount - {selected_year}")
+            ax.set_xlabel("Month")
+            ax.set_ylabel("Amount")
+            st.pyplot(fig)
+        
     def lpo_grn_gross_amount(self):
-        if not os.path.exists("data/lpo_grn_gross_amount.csv"):
-            st.error("csv file not exists")
-            return  
-        df=pd.read_csv("data/lpo_grn_gross_amount.csv")
-        st.dataframe(df)
+        csv_path = "data/lpo_grn.csv"
+
+        st.title("LPO vs GRN – By Project")
+
+
+        # Load the CSV with utf-8-sig encoding to handle BOM if present
+        try:
+            df = pd.read_csv(csv_path, encoding='utf-8-sig')
+        except Exception as e:
+            st.error(f"Error loading CSV with pandas: {e}")
+            return
+        # Strip whitespace from column headers
+        df.columns = df.columns.str.strip()
+       
+
+        # Check if 'Project' column exists
+        if 'Project' not in df.columns:
+            st.error("Required column 'Project' not found in data.")
+            return
+
+        projects = df['Project'].unique().tolist()
+        selected_projects = st.multiselect("Select Projects (max 15)", projects, default=projects[:10])
+
+        if len(selected_projects) > 15:
+            st.warning("Please select 15 or fewer projects.")
+            st.stop()
+
+        if not selected_projects:
+            st.info("Please select at least one project.")
+            st.stop()
+
+        filtered_df = df[df['Project'].isin(selected_projects)].reset_index(drop=True)
+
+        x = np.arange(len(filtered_df))
+        width = 0.35
+
+        fig, ax = plt.subplots(figsize=(12, 7))
+        ax.bar(x - width/2, filtered_df['PO_Value'], width, label='LPO Value')
+        ax.bar(x + width/2, filtered_df['GRN_Value'], width, label='GRN Value')
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(filtered_df['Project'], rotation=45, ha='right')
+        ax.set_xlabel("Project Codes")
+        ax.set_ylabel("Value in OMR")
+        ax.set_title("LPO vs GRN Values by Project")
+        ax.legend()
+
+        plt.tight_layout()
+        st.pyplot(fig)
+
     def lpo_grn_net_values(self):
-        if not os.path.exists("data/lpo_grn_net_values.csv"):
-            st.error("lpo_grn_net_values")
-            return
-        df=pd.read_csv("data/lpo_grn_net_values.csv")
-        st.dataframe(df)
-    def view_summary(self):
-        st.write("Purchase Summary")
-        if not os.path.exists("data/view_summary.csv"):
-            st.error("Csv file not found")
-            return
-        df = pd.read_csv("data/view_summary.csv")  
-        st.dataframe(df)
-        st.bar_chart(df.set_index("Date")["Amount"])
+    # Load the data
+        data = pd.read_csv("data/lpo_grn_net_value.csv")
+        data.columns = data.columns.str.strip()
+
+        # Add Net_Cost column before filtering
+        data['Net_Cost'] = data['PO_Net Value'] + data['GRN_Net Value']
+
+        projects = data['Project'].unique().tolist()
+        selected_projects = st.multiselect("Select Projects (max 15)", projects, default=projects[:10],key="lpo_grn_projects")
+
+        if len(selected_projects) > 15:
+            st.warning("Please select 15 or fewer projects.")
+            st.stop()
+
+        if not selected_projects:
+            st.info("Please select at least one project.")
+            st.stop()
+
+        filtered_df = data[data['Project'].isin(selected_projects)].reset_index(drop=True)
+
+        # Aggregate net cost by Project
+        net_cost_by_project = filtered_df.groupby('Project')['Net_Cost'].sum()
+
+        # Plot pie chart
+        fig, ax = plt.subplots(figsize=(8, 8))
+        ax.pie(net_cost_by_project, labels=net_cost_by_project.index, autopct='%1.1f%%')
+        ax.set_title('Net Cost (OMR) by Project')
+
+        st.pyplot(fig)
+
 
 if __name__ == "__main__":
     app = InfowayApp()
