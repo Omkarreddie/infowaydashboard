@@ -7,6 +7,12 @@ import hashlib
 import matplotlib.pyplot as plt
 import PyPDF2
 import numpy as np
+import base64
+# Make sure to set wide layout first
+
+def image_to_base64(image_path):
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
 
 # -------------------------- Utility Functions --------------------------
 def hash_password(password):
@@ -23,6 +29,34 @@ def load_users():
             users = pickle.load(f)
             if users:
                 return users
+    return {}
+def save_dashboard_groups():
+    os.makedirs("pickle_files", exist_ok=True)  # Ensure folder exists
+    with open("pickle_files/dashboard_groups.pkl", "wb") as f:
+        pickle.dump({
+            "Dashboard_groups": st.session_state.Dashboard_groups
+        }, f)
+
+def load_dashboard_groups():
+    if os.path.exists("pickle_files/dashboard_groups.pkl"):
+        with open("pickle_files/dashboard_groups.pkl", "rb") as f:
+            data = pickle.load(f)
+            # Return the saved set or an empty set
+            return data.get("Dashboard_groups", set())
+    return set()
+def save_dashboards():
+    os.makedirs("pickle_files", exist_ok=True)  # create directory, not file
+    with open("pickle_files/dashboards.pkl", "wb") as f:
+        pickle.dump({
+            "dashboards": st.session_state.dashboards
+        }, f)
+
+# Load dashboards from pickle
+def load_dashboards():
+    if os.path.exists("pickle_files/dashboards.pkl"):
+        with open("pickle_files/dashboards.pkl", "rb") as f:
+            data = pickle.load(f)
+            return data.get("dashboards", {})
     return {}
 
 # -------------------------- ROLES --------------------------
@@ -70,7 +104,10 @@ class InfowayApp():
             st.session_state.RESPONSIBILITIES = load_responsibilities()
         if 'ROLES_MAP' not in st.session_state:
             st.session_state.ROLES_MAP = load_roles()
-
+        if 'Dashboard_groups' not in st.session_state:
+            st.session_state.Dashboard_groups=load_dashboard_groups()
+        if 'dashboards' not in st.session_state:
+            st.session_state.dashboards=load_dashboards()
     def run(self):
         if not st.session_state.USERS:
             self.initial_admin_setup()
@@ -87,12 +124,67 @@ class InfowayApp():
             self.login()
 
     def login(self):
-        img = Image.open('src/logo.jpg')
-        st.image(img, width=250)
-        st.markdown("<h1 style='color: white; font-size: 35px; text-align: center;'>Infoway Technosoft Solutions PVT LTD</h1>", unsafe_allow_html=True)
+        # Custom CSS for styling
+        st.markdown("""
+            <style>
+                /* Full page background */
+                .stApp {
+                    background: linear-gradient(135deg, #1e3c72, #2a5298);
+                    background-attachment: fixed;
+                }
 
+
+                /* Logo styling */
+                .login-logo {
+                    width: 120px;
+                    height: 120px;
+                    border-radius: 50%;
+                    object-fit: contain;
+                    border: 2px solid white;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+                    margin-bottom: 20px;
+                }
+
+                /* Title styling */
+                .login-title {
+                    color: white;
+                    font-size: 22px;
+                    font-weight: bold;
+                    margin-bottom: 20px;
+                }
+
+                /* Input labels */
+                label {
+                    color: white !important;
+                    font-weight: bold;
+                }
+
+                /* Button styling */
+                div.stButton > button {
+                    width: 100%;
+                    background-color: #2a5298;
+                    color: white;
+                    height: 40px;
+                    font-size: 16px;
+                    border-radius: 8px;
+                }
+            </style>
+        """, unsafe_allow_html=True)
+
+        # Logo
+        st.markdown(
+            f"<img src='data:image/jpg;base64,{image_to_base64('src/logo.jpg')}' class='login-logo'>",
+            unsafe_allow_html=True
+        )
+
+        # Title
+        st.markdown("<div class='login-title'>Infoway Technosoft Solutions PVT LTD</div>", unsafe_allow_html=True)
+
+        # Inputs
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
+
+        # Button
         if st.button("Login"):
             if username in st.session_state.USERS:
                 stored_password = st.session_state.USERS[username][0]
@@ -108,12 +200,52 @@ class InfowayApp():
                     st.error("Invalid Username or Password")
             else:
                 st.error("Invalid Username or Password")
-    
+
+        st.markdown("</div></div>", unsafe_allow_html=True)
+
+
     def admin_dashboard(self):
         st.sidebar.markdown(
-            "<marquee behaviour='scroll' direction='left' scrollamount='5' style='color: white; font-size:20px; font-style: italic;'>Welcome to the Infoway Dashboard!</marquee>",
+            "<marquee behaviour='scroll' direction='left' scrollamount='5' style='color: blue; font-size:20px; font-style: italic;'>Welcome to the Infoway Dashboard!</marquee>",
             unsafe_allow_html=True,
         )
+        st.set_page_config(layout="wide")
+
+        # Inject CSS
+        st.markdown("""
+        <style>
+         {
+            padding-top: 0rem !important;
+            padding-bottom: 0rem !important;
+            padding-left: 0rem !important;   /* no horizontal gap */
+            padding-right: 0rem !important;
+        }
+ {
+            padding-left: 0rem !important;
+            padding-right: 0rem !important;
+        }
+ {
+            padding-top: 0.5rem !important;
+            padding-bottom: 0.5rem !important;
+        }
+
+        
+        section[data-testid="stSidebar"] button {
+            margin: 0.1rem 0 !important;
+            padding: 0.35rem 0.5rem !important;
+        }
+ {
+            margin: 0.1rem 0 !important;
+            padding-top: 0.25rem !important;
+            padding-bottom: 0.25rem !important;
+        }
+
+      {
+            margin-bottom: 0.25rem !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+      
 
         st.header("Admin Panel")
         st.sidebar.markdown("---")
@@ -154,7 +286,6 @@ class InfowayApp():
 
         if "admin_menu_open" not in st.session_state:
             st.session_state.admin_menu_open = False
-        st.sidebar.markdown("Admin Portal")
         if st.sidebar.button("Admin Portal"):
             st.text("Infoway Techno Soft Solutions")
             st.session_state.admin_menu_open = not st.session_state.admin_menu_open
@@ -163,6 +294,8 @@ class InfowayApp():
         if st.session_state.admin_menu_open:
             with st.sidebar:
                 st.markdown("**Admin Options:**")
+                if st.button("📊 DashBoard Group"):
+                    st.session_state.page= "dashboard_groups"
                 if st.button("🏠 DashBoard"):
                     st.session_state.page = "admin_dashboard"
                 if st.button("🧩 Responsibilities"):
@@ -175,10 +308,12 @@ class InfowayApp():
         st.sidebar.markdown("---")
         if st.sidebar.button("🚪 Logout"):
             self.logout() 
-
-        if st.session_state.get("page") == "admin_dashboard":
+        if st.session_state.get("page") == "dashboard_groups":
+            st.subheader("Dashboard Groups") 
+            self.dashboardgroups()
+        elif st.session_state.get("page") == "admin_dashboard":
             st.subheader("🏠 Admin Dashboard")
-            st.write("Welcome to the Admin Dashboard.")
+            self.dashboard()
         elif st.session_state.get("page") == "responsibilities":
             self.manage_responsibilities()
         elif st.session_state.get("page") == "roles":
@@ -206,6 +341,69 @@ class InfowayApp():
         elif st.session_state.get("page") == "lpo_grn_net_values":
             st.subheader("LPO GRN NET VALUES")
             self.lpo_grn_net_values()
+    
+    def dashboardgroups(self):
+        new_grp = st.text_input("Group Name")
+        Desc = st.text_input("Description")
+
+        if st.button("Add Group Name"):
+            if not new_grp:
+                st.warning("Group name cannot be empty.")
+            elif new_grp in st.session_state.Dashboard_groups:
+                st.warning("Duplicate group name.")
+            else:
+                # Add new group
+                st.session_state.Dashboard_groups.add(new_grp)
+                save_dashboard_groups()  # save updated groups to pickle
+                st.success(f"Dashboard group '{new_grp}' added.")
+                st.rerun()
+
+# Dashboard function
+    def dashboard(self):
+        st.subheader("Dashboards")
+
+        # Ensure dashboards exists and is a dict
+        if "dashboards" not in st.session_state or not isinstance(st.session_state.dashboards, dict):
+            st.session_state.dashboards = {}
+
+        # Prepare dashboard groups list
+        dashboard_groups = st.session_state.get("Dashboard_groups")
+        if not dashboard_groups:
+            dashboard_groups_list = []
+        elif isinstance(dashboard_groups, dict):
+            dashboard_groups_list = list(dashboard_groups.keys())
+        elif isinstance(dashboard_groups, set):
+            dashboard_groups_list = list(dashboard_groups)
+        else:
+            dashboard_groups_list = []
+
+        selected_db_grp = st.multiselect("Dashboard Group", dashboard_groups_list)
+        dashboard_name = st.text_input("Dashboard Name")
+
+        # Auto-generate Dashboard ID as 4-digit string starting from 0001
+        if st.session_state.dashboards:
+            max_id = max([int(details["id"]) for details in st.session_state.dashboards.values()])
+            dashboard_id = f"{max_id + 1:04d}"
+        else:
+            dashboard_id = "0001"
+
+        st.write(f"Dashboard ID: {dashboard_id}")
+
+        # Add dashboard button
+        if st.button("Add Dashboard"):
+            if not dashboard_name or not selected_db_grp:
+                st.warning("Please provide a dashboard name and select at least one group.")
+            elif dashboard_name in st.session_state.dashboards:
+                st.warning("Dashboard name already exists.")
+            else:
+                st.session_state.dashboards[dashboard_name] = {
+                    "id": dashboard_id,
+                    "groups": selected_db_grp
+                }
+                save_dashboards()  # Save to pickle
+                st.success(f"Dashboard '{dashboard_name}' added with ID {dashboard_id}.")
+                st.rerun()
+
 
     def manage_responsibilities(self):
         st.header("Manage Responsibilities")
@@ -229,11 +427,16 @@ class InfowayApp():
 
     def manage_roles(self):
         st.header("Manage Roles")
+
+        # Add new role section
         if not st.session_state.RESPONSIBILITIES:
             st.warning("No responsibilities defined yet. Add some first.")
         else:
             new_role = st.text_input("Enter New Role")
-            selected_responsibilities = st.multiselect("Assign Responsibilities", list(st.session_state.RESPONSIBILITIES))
+            selected_responsibilities = st.multiselect(
+                "Assign Responsibilities", 
+                list(st.session_state.RESPONSIBILITIES)
+            )
             if st.button("Add Role"):
                 if new_role and selected_responsibilities:
                     if new_role not in st.session_state.ROLES_MAP:
@@ -248,32 +451,63 @@ class InfowayApp():
 
         st.markdown("---")
         st.subheader("Existing Roles")
+
+        # Show roles in a table
         if st.session_state.ROLES_MAP:
-            for role, responsibilities in sorted(st.session_state.ROLES_MAP.items()):
-                with st.expander(f"Role: {role}"):
-                    for r in responsibilities:
-                        st.markdown(f"- {r}")
+            # Prepare data
+            roles_data = [
+                {"Role": role, "Responsibilities": ", ".join(responsibilities)}
+                for role, responsibilities in sorted(st.session_state.ROLES_MAP.items())
+            ]
+            
+            df_roles = pd.DataFrame(roles_data)
+            st.dataframe(df_roles, use_container_width=True)  # nice table view
         else:
             st.info("No roles defined yet.")
 
+
+  
+
     def manage_users(self):
         st.header("User Access")
-        if st.button("Create New User"):
+
+        # Create User Button
+        if st.button("Add New User"):
             st.session_state.show_create_user_form = True
             st.session_state._editing_user = None
-        if st.session_state.show_create_user_form:
+
+        if st.session_state.get("show_create_user_form", False):
             self.createuser()
+
         st.subheader("Registered Users")
-        for name, details in st.session_state.USERS.items():
-            [role] = details[1] if isinstance(details[1], list) else [details[1]]
-            col1, col2 = st.columns([4, 1])
-            with col1:
-                st.write(f"**{name}** | Role: {role} | Email: {details[2]}")
-            with col2:
-                if st.button("✏️ Edit", key=f"edit_{name}"):
-                    st.session_state._editing_user = name
-                    st.session_state.show_create_user_form = True
-                    st.rerun()
+
+        if not st.session_state.USERS:
+            st.info("No registered users found.")
+            return
+
+        # Table header
+        cols = st.columns([2, 2, 3])
+        cols[0].write("**Username**")
+        cols[1].write("**Role**")
+        cols[2].write("**Email**")
+
+        # Display users as "hyperlinks"
+        for username, details in st.session_state.USERS.items():
+            role_data = details[1]
+            role = role_data[0] if isinstance(role_data, list) and role_data else role_data
+            email = details[2]
+
+            cols = st.columns([2, 2, 3])
+
+            # Button styled as hyperlink
+            if cols[0].button(f"➡️ {username}", key=f"user_{username}"):
+                st.session_state._editing_user = username
+                st.session_state.show_create_user_form = True
+                st.rerun()
+
+            cols[1].write(role)
+            cols[2].write(email)
+
 
     def createuser(self):
         is_edit_mode = st.session_state.get("_editing_user") is not None
