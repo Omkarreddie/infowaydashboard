@@ -884,7 +884,6 @@ class InfowayApp():
         st.pyplot(fig)
 
     def lpo_grn_net_values(self):
-    # Load the data
         data = pd.read_csv("data/lpo_grn_net_value.csv")
         data.columns = data.columns.str.strip()
 
@@ -904,10 +903,8 @@ class InfowayApp():
 
         filtered_df = data[data['Project'].isin(selected_projects)].reset_index(drop=True)
 
-        # Aggregate net cost by Project
         net_cost_by_project = filtered_df.groupby('Project')['Net_Cost'].sum()
 
-        # Plot pie chart
         fig, ax = plt.subplots(figsize=(8, 8))
         ax.pie(net_cost_by_project, labels=net_cost_by_project.index, autopct='%1.1f%%')
         ax.set_title('Net Cost (OMR) by Project')
