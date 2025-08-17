@@ -567,7 +567,8 @@ class InfowayApp():
             saved_responsibilities = []
 
         # Get available responsibilities
-        available_responsibilities = list(st.session_state.RESPONSIBILITIES.keys())
+
+        available_responsibilities = list(st.session_state.setdefault("RESPONSIBILITIES", {}))
         valid_saved_responsibilities = [r for r in saved_responsibilities if r in available_responsibilities]
 
         with st.form("create_user_form"):
