@@ -3,12 +3,15 @@ import os
 import pandas as pd
 from PIL import Image
 import pickle
-import hashlib
+import hashlib,random,smtplib
+from email.mime.text import MIMEText
 import matplotlib.pyplot as plt
 import PyPDF2
 import numpy as np
 import base64
+import seaborn as sns # type: ignore
 # Make sure to set wide layout first
+
 
 def image_to_base64(image_path):
     with open(image_path, "rb") as img_file:
@@ -18,7 +21,6 @@ def image_to_base64(image_path):
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# -------------------------- USERS --------------------------
 def save_users(users):
     with open("pickle_files/users.pkl", "wb") as f:
         pickle.dump(users, f)
@@ -41,9 +43,17 @@ def load_dashboard_groups():
     if os.path.exists("pickle_files/dashboard_groups.pkl"):
         with open("pickle_files/dashboard_groups.pkl", "rb") as f:
             data = pickle.load(f)
-            # Return the saved set or an empty set
-            return data.get("Dashboard_groups", set())
-    return set()
+            groups = data.get("Dashboard_groups", {})
+
+            # 🔧 If old data is a set, convert to dict
+            if isinstance(groups, set):
+                groups = {g: {"Description": ""} for g in groups}
+                # Re-save in dict format so error never comes back
+                with open("pickle_files/dashboard_groups.pkl", "wb") as fw:
+                    pickle.dump({"Dashboard_groups": groups}, fw)
+
+            return groups
+    return {}
 def save_dashboards():
     os.makedirs("pickle_files", exist_ok=True)  # create directory, not file
     with open("pickle_files/dashboards.pkl", "wb") as f:
@@ -75,17 +85,21 @@ def load_roles():
 
 # -------------------------- RESPONSIBILITIES --------------------------
 def save_responsibilities():
-    with open("pickle_files/responsibilities.pkl", "wb") as f:
-        pickle.dump({
-            "RESPONSIBILITIES": list(st.session_state.RESPONSIBILITIES)
-        }, f)
+    os.makedirs("pickle_files", exist_ok=True)  # ensure folder exists
+    with open("pickel_files/responsibilities.pkl", "wb") as f:
+        # save the full dictionary
+        pickle.dump(st.session_state.RESPONSIBILITIES, f)
 
 def load_responsibilities():
-    if os.path.exists("pickle_files/responsibilities.pkl"):
-        with open("pickle_files/responsibilities.pkl", "rb") as f:
+    if os.path.exists("pickel_files/responsibilities.pkl"):
+        with open("pickel_files/responsibilities.pkl", "rb") as f:
             data = pickle.load(f)
-            return set(data.get("RESPONSIBILITIES", []))
-    return set()
+            if isinstance(data, dict):
+                st.session_state.RESPONSIBILITIES = data
+            else:
+                st.session_state.RESPONSIBILITIES = {}
+    else:
+        st.session_state.RESPONSIBILITIES = {}
 
 # -------------------------- Main App Class --------------------------
 class InfowayApp():
@@ -202,8 +216,12 @@ class InfowayApp():
                     st.error("Invalid Username or Password")
             else:
                 st.error("Invalid Username or Password")
+        elif st.button("Forgot Password"):
+             st.session_state.page="forgot"
+             st.rerun()
 
         st.markdown("</div></div>", unsafe_allow_html=True)
+           
 
 
     def admin_dashboard(self):
@@ -288,14 +306,13 @@ class InfowayApp():
 
         if "admin_menu_open" not in st.session_state:
             st.session_state.admin_menu_open = False
-        if st.sidebar.button("Admin Portal"):
+        if st.sidebar.button("👨‍💻 Admin Portal"):
             st.text("Infoway Techno Soft Solutions")
             st.session_state.admin_menu_open = not st.session_state.admin_menu_open
             st.session_state.page = None
 
         if st.session_state.admin_menu_open:
             with st.sidebar:
-                st.markdown("**Admin Options:**")
                 if st.button("📊 DashBoard Group"):
                     st.session_state.page= "dashboard_groups"
                 if st.button("🏠 DashBoard"):
@@ -343,10 +360,22 @@ class InfowayApp():
         elif st.session_state.get("page") == "lpo_grn_net_values":
             st.subheader("LPO GRN NET VALUES")
             self.lpo_grn_net_values()
-    
     def dashboardgroups(self):
+        st.subheader("📊 Dashboard Groups")
+
+        # ✅ Ensure dict format in session state
+        if "Dashboard_groups" not in st.session_state:
+            st.session_state.Dashboard_groups = load_dashboard_groups()
+
+        if isinstance(st.session_state.Dashboard_groups, set):
+            st.session_state.Dashboard_groups = {
+                g: {"Description": ""} for g in st.session_state.Dashboard_groups
+            }
+            save_dashboard_groups()
+
+        # --- Add new group form ---
         new_grp = st.text_input("Group Name")
-        Desc = st.text_input("Description")
+        desc = st.text_input("Description")
 
         if st.button("Add Group Name"):
             if not new_grp:
@@ -354,35 +383,68 @@ class InfowayApp():
             elif new_grp in st.session_state.Dashboard_groups:
                 st.warning("Duplicate group name.")
             else:
-                # Add new group
-                st.session_state.Dashboard_groups.add(new_grp)
-                save_dashboard_groups()  # save updated groups to pickle
-                st.success(f"Dashboard group '{new_grp}' added.")
+                st.session_state.Dashboard_groups[new_grp] = {"Description": desc}
+                save_dashboard_groups()
+                st.toast(f"✅ Dashboard group '{new_grp}' added successfully!")
                 st.rerun()
 
+        # --- Show existing groups in table ---
+        if st.session_state.Dashboard_groups:
+            st.write("### Existing Dashboard Groups")
+
+            # Table header
+            cols = st.columns([2, 4])  
+            cols[0].markdown("**Group Name**")
+            cols[1].markdown("**Description**")
+
+            # Table rows
+            for g, d in st.session_state.Dashboard_groups.items():
+                cols = st.columns([2, 4])
+                with cols[0]:
+                    if st.button(g, key=f"link_{g}"):
+                        st.session_state.edit_group = g
+                        st.rerun()
+                with cols[1]:
+                    st.write(d["Description"])
+
+        # --- Edit mode ---
+        if "edit_group" in st.session_state:
+            g = st.session_state.edit_group
+            st.subheader(f"✏️ Edit Group: {g}")
+            new_name = st.text_input("Edit Group Name", g)
+            new_desc = st.text_input(
+                "Edit Description",
+                st.session_state.Dashboard_groups[g]["Description"]
+            )
+            if st.button("Update Group"):
+                if new_name != g:
+                    st.session_state.Dashboard_groups.pop(g)
+                st.session_state.Dashboard_groups[new_name] = {"Description": new_desc}
+                save_dashboard_groups()
+                st.toast(f"✅ Group '{new_name}' updated successfully!")
+                del st.session_state.edit_group
+                st.rerun()
 # Dashboard function
     def dashboard(self):
-        st.subheader("Dashboards")
+        st.subheader("📊 Dashboards")
 
-        # Ensure dashboards exists and is a dict
-        if "dashboards" not in st.session_state or not isinstance(st.session_state.dashboards, dict):
-            st.session_state.dashboards = {}
+        # --- Ensure dashboards exists and is a dict ---
+        
 
-        # Prepare dashboard groups list
-        dashboard_groups = st.session_state.get("Dashboard_groups")
-        if not dashboard_groups:
-            dashboard_groups_list = []
-        elif isinstance(dashboard_groups, dict):
+        # --- Prepare dashboard groups list ---
+        dashboard_groups = st.session_state.get("Dashboard_groups", {})
+        if isinstance(dashboard_groups, dict):
             dashboard_groups_list = list(dashboard_groups.keys())
         elif isinstance(dashboard_groups, set):
             dashboard_groups_list = list(dashboard_groups)
         else:
             dashboard_groups_list = []
 
+        # --- Form for new dashboard ---
         selected_db_grp = st.multiselect("Dashboard Group", dashboard_groups_list)
         dashboard_name = st.text_input("Dashboard Name")
 
-        # Auto-generate Dashboard ID as 4-digit string starting from 0001
+        # Auto-generate Dashboard ID
         if st.session_state.dashboards:
             max_id = max([int(details["id"]) for details in st.session_state.dashboards.values()])
             dashboard_id = f"{max_id + 1:04d}"
@@ -391,7 +453,7 @@ class InfowayApp():
 
         st.write(f"Dashboard ID: {dashboard_id}")
 
-        # Add dashboard button
+        # --- Add Dashboard button ---
         if st.button("Add Dashboard"):
             if not dashboard_name or not selected_db_grp:
                 st.warning("Please provide a dashboard name and select at least one group.")
@@ -403,33 +465,106 @@ class InfowayApp():
                     "groups": selected_db_grp
                 }
                 save_dashboards()  # Save to pickle
-                st.success(f"Dashboard '{dashboard_name}' added with ID {dashboard_id}.")
+                st.success(f"✅ Dashboard '{dashboard_name}' added successfully with ID {dashboard_id}!")
+                st.rerun()
+
+        # --- Show existing dashboards in table ---
+        if st.session_state.dashboards:
+            st.write("### Existing Dashboards")
+
+            # Table header
+            cols = st.columns([2, 2, 4])
+            cols[0].markdown("**Dashboard ID**")
+            cols[1].markdown("**Dashboard Name**")
+            cols[2].markdown("**Groups**")
+
+            # Table rows
+            for d_name, details in st.session_state.dashboards.items():
+                cols = st.columns([2, 2, 4])
+                with cols[0]:
+                    st.write(details["id"])
+                with cols[1]:
+                    if st.button(d_name, key=f"link_{d_name}"):  # hyperlink style
+                        st.session_state.edit_dashboard = d_name
+                        st.rerun()
+                with cols[2]:
+                    st.write(", ".join(details["groups"]))
+
+        # --- Edit mode ---
+        if "edit_dashboard" in st.session_state:
+            d_name = st.session_state.edit_dashboard
+            st.subheader(f"✏️ Edit Dashboard: {d_name}")
+            
+            new_name = st.text_input("Edit Dashboard Name", d_name)
+            new_groups = st.multiselect(
+                "Edit Groups",
+                dashboard_groups_list,
+                default=st.session_state.dashboards[d_name]["groups"]
+            )
+            new_id = st.text_input("Dashboard ID", st.session_state.dashboards[d_name]["id"], disabled=True)
+
+            if st.button("Update Dashboard"):
+                if new_name != d_name:
+                    st.session_state.dashboards.pop(d_name)
+                st.session_state.dashboards[new_name] = {
+                    "id": new_id,
+                    "groups": new_groups
+                }
+                save_dashboards()
+                st.success(f"✅ Dashboard '{new_name}' updated successfully!")
+                del st.session_state.edit_dashboard
                 st.rerun()
     def manage_roles(self):
+        # --- Ensure state keys exist ---
+        if "Dashboard_groups" not in st.session_state:
+            st.session_state.Dashboard_groups = set()
+
+        if "dashboards" not in st.session_state:
+            st.session_state.dashboards = {}
+
+        if "ROLES_MAP" not in st.session_state:
+            st.session_state.ROLES_MAP = {}
+
         st.header("Manage Roles")
 
-        if not st.session_state.Dashboard_groups:
-            st.warning("No Dashboard groups defined yet. Add some first.")
+        # --- Get column names from purchase data ---
+        try:
+            df = self.load_purchase_data()
+            column_names = list(df.columns)
+        except Exception:
+            column_names = []
+
+        # Combine options: existing groups + column names
+        combined_options = sorted(set(st.session_state.Dashboard_groups).union(column_names))
+
+        # --- Add new role ---
+        if not combined_options:
+            st.warning("No Dashboard groups or data columns defined yet.")
         else:
-            new_role = st.text_input("Enter New Role")
+            new_role = st.text_input("Enter New Role").strip()
             selected_groups = st.multiselect(
-                "Dashboard Groups", 
-                list(st.session_state.Dashboard_groups)
+                "Dashboard Groups",
+                options=combined_options
             )
 
             selected_dashboards = []
 
-            # Show dashboards in selected groups with checkboxes
+            # Show dashboards belonging to selected groups
             if selected_groups and "dashboards" in st.session_state:
                 st.markdown("**Select Dashboards for this Role:**")
+                dashboards_found = False
                 for name, details in st.session_state.dashboards.items():
                     if any(group in details["groups"] for group in selected_groups):
+                        dashboards_found = True
                         checkbox_key = f"select_{name}"
-                        if st.checkbox(f"{details['id']} - {name} ({', '.join(details['groups'])})", key=checkbox_key):
+                        if st.checkbox(
+                            f"{details['id']} - {name} ({', '.join(details['groups'])})",
+                            key=checkbox_key
+                        ):
                             selected_dashboards.append(name)
 
-                if not selected_dashboards:
-                    st.info("No dashboards selected yet.")
+                if not dashboards_found:
+                    st.info("No dashboards found in the selected groups.")
 
             if st.button("Add Role"):
                 if new_role and selected_groups:
@@ -446,32 +581,65 @@ class InfowayApp():
                 else:
                     st.warning("Enter a role, select dashboard groups, and choose dashboards.")
 
+        # --- Existing Roles ---
         st.markdown("---")
         st.subheader("Existing Roles")
 
         if st.session_state.ROLES_MAP:
-            roles_data = []
             for role, data in sorted(st.session_state.ROLES_MAP.items()):
-                if isinstance(data, dict):  # New format
-                    groups = data.get("groups", [])
-                    dashboards = data.get("dashboards", [])
-                else:  # Old format (list of groups only)
-                    groups = data
-                    dashboards = []
-                
-                roles_data.append({
-                    "Role": role,
-                    "Dashboard Groups": ", ".join(groups),
-                    "Dashboards": ", ".join(dashboards) if dashboards else ""
-                })
-
-            st.dataframe(pd.DataFrame(roles_data), use_container_width=True)
+                # clickable role name (acts like hyperlink)
+                if st.button(role, key=f"edit_{role}"):
+                    st.session_state.editing_role = role
+                    st.rerun()
         else:
             st.info("No roles defined yet.")
 
+        # --- Edit Role Form ---
+        if "editing_role" in st.session_state:
+            role_to_edit = st.session_state.editing_role
+            role_data = st.session_state.ROLES_MAP[role_to_edit]
 
+            st.markdown("---")
+            st.subheader(f"✏️ Edit Role: {role_to_edit}")
 
+            new_name = st.text_input("Role Name", value=role_to_edit)
 
+            # validate defaults (some old groups may not exist anymore)
+            valid_defaults = [g for g in role_data.get("groups", []) if g in combined_options]
+
+            selected_groups = st.multiselect(
+                "Dashboard Groups",
+                options=combined_options,
+                default=valid_defaults
+            )
+
+            selected_dashboards = []
+            if selected_groups and "dashboards" in st.session_state:
+                st.markdown("**Select Dashboards for this Role:**")
+                for name, details in st.session_state.dashboards.items():
+                    if any(group in details["groups"] for group in selected_groups):
+                        checked = name in role_data.get("dashboards", [])
+                        if st.checkbox(
+                            f"{details['id']} - {name} ({', '.join(details['groups'])})",
+                            value=checked,
+                            key=f"edit_chk_{name}"
+                        ):
+                            selected_dashboards.append(name)
+
+            if st.button("💾 Save Changes"):
+                st.session_state.ROLES_MAP.pop(role_to_edit)
+                st.session_state.ROLES_MAP[new_name] = {
+                    "groups": selected_groups,
+                    "dashboards": selected_dashboards
+                }
+                save_roles()
+                st.success(f"Role '{new_name}' updated.")
+                st.session_state.pop("editing_role")
+                st.rerun()
+
+            if st.button("❌ Cancel"):
+                st.session_state.pop("editing_role")
+                st.rerun()
     def manage_responsibilities(self):
         st.header("Manage Responsibilities")
 
@@ -689,7 +857,6 @@ class InfowayApp():
         self.GRN()
         self.lpo_grn_gross_amount()
         self.lpo_grn_net_values()
-        
     def load_purchase_data(self,file_path="data/lpo_data.csv"):
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Purchase file not found: {file_path}")
@@ -732,7 +899,7 @@ class InfowayApp():
         projects = st.multiselect(
             "Select Projects",
             options=sorted(df["Project"].unique()),
-            default=sorted(df["Project"].unique())
+            default=[]
         )
 
         view_mode = st.radio(
@@ -799,7 +966,7 @@ class InfowayApp():
         projects = st.multiselect(
             "Select Projects",
             options=sorted(df["Project"].unique()),
-            default=sorted(df["Project"].unique())
+            default=[]
         )
 
         view_mode = st.radio(
@@ -855,7 +1022,7 @@ class InfowayApp():
             return
 
         projects = df['Project'].unique().tolist()
-        selected_projects = st.multiselect("Select Projects (max 15)", projects, default=projects[:10])
+        selected_projects = st.multiselect("Select Projects (max 15)", projects, default=[])
 
         if len(selected_projects) > 15:
             st.warning("Please select 15 or fewer projects.")
@@ -892,7 +1059,7 @@ class InfowayApp():
         data['Net_Cost'] = data['PO_Net Value'] + data['GRN_Net Value']
 
         projects = data['Project'].unique().tolist()
-        selected_projects = st.multiselect("Select Projects (max 15)", projects, default=projects[:10],key="lpo_grn_projects")
+        selected_projects = st.multiselect("Select Projects (max 15)", projects, default=[],key="lpo_grn_projects")
 
         if len(selected_projects) > 15:
             st.warning("Please select 15 or fewer projects.")
@@ -911,6 +1078,12 @@ class InfowayApp():
         ax.set_title('Net Cost (OMR) by Project')
 
         st.pyplot(fig)
+    def seaborn(self):
+        data=pd.read_csv('data/sales_data.csv')
+        dt=pd.DataFrame(data)
+        sns.barplot(x="City", y="Total", data=data, palette="viridis")
+        plt.title("Total Sales by City")
+        plt.show()
 
 
 if __name__ == "__main__":
