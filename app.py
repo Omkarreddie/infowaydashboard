@@ -13,6 +13,7 @@ import seaborn as sns # type: ignore
 # Make sure to set wide layout first
 
 
+
 def image_to_base64(image_path):
     with open(image_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode()
@@ -84,22 +85,24 @@ def load_roles():
     return {}
 
 # -------------------------- RESPONSIBILITIES --------------------------
+
 def save_responsibilities():
     os.makedirs("pickle_files", exist_ok=True)  # ensure folder exists
-    with open("pickel_files/responsibilities.pkl", "wb") as f:
-        # save the full dictionary
+    with open("pickle_files/responsibilities.pkl", "wb") as f:
+        # Always save the dict directly
         pickle.dump(st.session_state.RESPONSIBILITIES, f)
 
 def load_responsibilities():
-    if os.path.exists("pickel_files/responsibilities.pkl"):
-        with open("pickel_files/responsibilities.pkl", "rb") as f:
+    if os.path.exists("pickle_files/responsibilities.pkl"):
+        with open("pickle_files/responsibilities.pkl", "rb") as f:
             data = pickle.load(f)
+            # ✅ Ensure dict format
             if isinstance(data, dict):
-                st.session_state.RESPONSIBILITIES = data
-            else:
-                st.session_state.RESPONSIBILITIES = {}
-    else:
-        st.session_state.RESPONSIBILITIES = {}
+                return data
+            elif isinstance(data, (list, set)):
+                # old format migration → convert to dict
+                return {r: [] for r in data}
+    return {}
 
 # -------------------------- Main App Class --------------------------
 class InfowayApp():
@@ -130,11 +133,14 @@ class InfowayApp():
             role = st.session_state.role.strip().lower()
             if role == "admin":
                 self.admin_dashboard()
-            elif role in ["user", "salesmanager", "salesman1", "salesman2",
-                        "purchasemanager", "purchaseasst1", "purchaseasst2"]:
+            #elif role in ["user", "salesmanager", "salesman1", "salesman2",
+             #       "purchasemanager", "purchaseasst1", "purchaseasst2","View Purchase Chart"]:
+              #  self.user_dashboard()
+            elif  role:
                 self.user_dashboard()
             else:
-                st.warning(f"No dashboard assigned for role: {st.session_state.role}")
+                st.warning("No dashboard found")
+
 
         else:
             self.login()
@@ -196,29 +202,47 @@ class InfowayApp():
         # Title
         st.markdown("<div class='login-title'>Infoway Technosoft Solutions PVT LTD</div>", unsafe_allow_html=True)
 
+       # Inputs
         # Inputs
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
 
-        # Button
         if st.button("Login"):
             if username in st.session_state.USERS:
-                stored_password = st.session_state.USERS[username][0]
-                if hash_password(password) == stored_password:
+                user_data = st.session_state.USERS[username]
+
+                stored_password = user_data[0]
+                user_role = user_data[1]
+                email = user_data[2]
+                inactive = user_data[3] 
+                is_admin = user_data[4] 
+
+                # 🚫 Block inactive users, but NOT admins
+                if inactive and not is_admin:
+                    st.error("🚫 This user account is inactive. Please contact Admin.")
+                elif hash_password(password) == stored_password:
                     st.session_state.logged_in = True
                     st.session_state.username = username
-                    roles = st.session_state.USERS[username][1]
-                    user_role = roles[0] if isinstance(roles, list) else roles
-                    st.session_state.role = user_role
-                    st.success("Login Successful")
+
+                    # ✅ Admin override
+                    if is_admin:
+                        st.session_state.role = "admin"
+                    else:
+                        # responsibilities is a list -> pick first if available
+                        st.session_state.role = user_role[0] if isinstance(user_role, list) and user_role else "user"
+
+                    st.success("✅ Login Successful")
                     st.rerun()
+        
                 else:
                     st.error("Invalid Username or Password")
             else:
                 st.error("Invalid Username or Password")
+
         elif st.button("Forgot Password"):
-             st.session_state.page="forgot"
-             st.rerun()
+            st.session_state.page = "forgot_password"
+
+
 
         st.markdown("</div></div>", unsafe_allow_html=True)
            
@@ -234,56 +258,44 @@ class InfowayApp():
         # Inject CSS
         st.markdown("""
         <style>
-         {
-            padding-top: 0rem !important;
-            padding-bottom: 0rem !important;
-            padding-left: 0rem !important;   /* no horizontal gap */
-            padding-right: 0rem !important;
-        }
- {
-            padding-left: 0rem !important;
-            padding-right: 0rem !important;
-        }
- {
-            padding-top: 0.5rem !important;
-            padding-bottom: 0.5rem !important;
-        }
-
-        
+        /* Sidebar buttons same size */
         section[data-testid="stSidebar"] button {
-            margin: 0.1rem 0 !important;
-            padding: 0.35rem 0.5rem !important;
+            width: 100% !important;
+            height: 45px !important;
+            margin: 0.25rem 0 !important;
+            padding: 0.5rem 0 !important;
+            border-radius: 6px !important;
+            text-align: center !important;
         }
- {
-            margin: 0.1rem 0 !important;
-            padding-top: 0.25rem !important;
-            padding-bottom: 0.25rem !important;
+        section[data-testid="stSidebar"] button:hover {
+            background-color: #f0f2f6 !important;
+            border: 1px solid #4a90e2 !important;
         }
-
-      {
-            margin-bottom: 0.25rem !important;
+        /* Remove extra padding from main content */
+        div.block-container {
+            padding-top: 3rem !important;     /* no gap at top */
+            padding-bottom: 1rem !important;  /* keep little space at bottom */
+            padding-left: 1rem !important;    /* reduce left gap */
+            padding-right: 1rem !important;   /* reduce right gap */
         }
         </style>
-        """, unsafe_allow_html=True)
-      
-
+    """, unsafe_allow_html=True)
         st.header("Admin Panel")
         st.sidebar.markdown("---")
-       # st.sidebar.markdown("### 📦 Sales Module")
 
-        #if "sales_module_open" not in st.session_state:
-         #   st.session_state.sales_module_open = False
-        #if st.sidebar.button("📦 Sales Dashboard"):
-         #   st.session_state.sales_module_open = not st.session_state.sales_module_open
-          #  st.session_state.page = None
+        if "sales_module_open" not in st.session_state:
+            st.session_state.sales_module_open = False
+        if st.sidebar.button("📦 Sales Dashboard"):
+           st.session_state.sales_module_open = not st.session_state.sales_module_open
+           st.session_state.page = None
 
-        #if st.session_state.sales_module_open:
+        if st.session_state.sales_module_open:
          #   if st.session_state.role in ["admin", "salesmanager", "salesman1","salesman2"]:
-          #      if st.sidebar.button("📊 View Sales Chart"):
-           #         st.session_state.page = "sales_dashboard"
+                if st.sidebar.button("📊 View Sales Chart"):
+                   st.session_state.page = "sales_dashboard"
             #if st.session_state.role in ["admin", "salesmanager"]:
-             #   if st.sidebar.button("📈 View Budgeting"):
-              #      st.session_state.page = "budgeting"
+                if st.sidebar.button("📈 View Budgeting"):
+                   st.session_state.page = "budgeting"
 
         if "purchase_open" not in st.session_state:
             st.session_state.purchase_open = False
@@ -292,7 +304,6 @@ class InfowayApp():
            st.session_state.page = None
 
         if st.session_state.purchase_open:
-            if st.session_state.role in ["admin", "purchasemanager", "purchaseasst1","purchaseasst2","purchase assistant"]:
                 if st.sidebar.button("Purchase Dashboard"):
                     st.session_state.page="purchase_dashborad"
                 if st.sidebar.button("LPO DATA"):
@@ -308,6 +319,10 @@ class InfowayApp():
             st.session_state.admin_menu_open = False
         if st.sidebar.button("👨‍💻 Admin Portal"):
             st.text("Infoway Techno Soft Solutions")
+            st.markdown(
+            f"<img src='data:image/jpg;base64,{image_to_base64('src/logo.jpg')}' class='login-logo'>",
+            unsafe_allow_html=True
+        )
             st.session_state.admin_menu_open = not st.session_state.admin_menu_open
             st.session_state.page = None
 
@@ -339,12 +354,12 @@ class InfowayApp():
             self.manage_responsibilities()
         elif st.session_state.get("page") == "users":
             self.manage_users()
-       # elif st.session_state.get("page") == "sales_dashboard":
-        #    st.subheader("📊 Sales Dashboard")
-         #   self.show_sales_chart()
-        #elif st.session_state.get("page") == "budgeting":
-         #   st.subheader("📈 Budgeting Section")
-          #  self.show_budgeting_section()
+        elif st.session_state.get("page") == "sales_dashboard":
+            st.subheader("📊 Sales Dashboard")
+            self.show_sales_chart()
+        elif st.session_state.get("page") == "budgeting":
+            st.subheader("📈 Budgeting Section")
+            self.show_budgeting_section()
         elif st.session_state.get("page") == "purchase_dashborad":
             st.subheader("Purchase Dashboard")
             self.purchase_dashboard()
@@ -374,10 +389,13 @@ class InfowayApp():
             save_dashboard_groups()
 
         # --- Add new group form ---
-        new_grp = st.text_input("Group Name")
-        desc = st.text_input("Description")
+        st.text_input("Group Name", key="new_grp_input")
+        st.text_input("Description", key="desc_input")
 
-        if st.button("Add Group Name"):
+        def add_group():
+            new_grp = st.session_state.new_grp_input
+            desc = st.session_state.desc_input
+
             if not new_grp:
                 st.warning("Group name cannot be empty.")
             elif new_grp in st.session_state.Dashboard_groups:
@@ -385,8 +403,11 @@ class InfowayApp():
             else:
                 st.session_state.Dashboard_groups[new_grp] = {"Description": desc}
                 save_dashboard_groups()
-                st.toast(f"✅ Dashboard group '{new_grp}' added successfully!")
-                st.rerun()
+                st.success(f"✅ Dashboard group '{new_grp}' added successfully!")
+                st.session_state.new_grp_input = ""
+                st.session_state.desc_input = ""
+
+        st.button("Add Group Name", on_click=add_group)
 
         # --- Show existing groups in table ---
         if st.session_state.Dashboard_groups:
@@ -411,20 +432,26 @@ class InfowayApp():
         if "edit_group" in st.session_state:
             g = st.session_state.edit_group
             st.subheader(f"✏️ Edit Group: {g}")
-            new_name = st.text_input("Edit Group Name", g)
-            new_desc = st.text_input(
+
+            st.text_input("Edit Group Name", g, key="edit_name_input")
+            st.text_input(
                 "Edit Description",
-                st.session_state.Dashboard_groups[g]["Description"]
+                st.session_state.Dashboard_groups[g]["Description"],
+                key="edit_desc_input"
             )
-            if st.button("Update Group"):
+
+            def update_group():
+                new_name = st.session_state.edit_name_input
+                new_desc = st.session_state.edit_desc_input
                 if new_name != g:
                     st.session_state.Dashboard_groups.pop(g)
                 st.session_state.Dashboard_groups[new_name] = {"Description": new_desc}
                 save_dashboard_groups()
-                st.toast(f"✅ Group '{new_name}' updated successfully!")
+                st.success(f"✅ Group '{new_name}' updated successfully!")
                 del st.session_state.edit_group
-                st.rerun()
-# Dashboard function
+
+            st.button("Update Group", on_click=update_group)
+   # Dashboard function
     def dashboard(self):
         st.subheader("📊 Dashboards")
 
@@ -466,8 +493,6 @@ class InfowayApp():
                 }
                 save_dashboards()  # Save to pickle
                 st.success(f"✅ Dashboard '{dashboard_name}' added successfully with ID {dashboard_id}!")
-                st.rerun()
-
         # --- Show existing dashboards in table ---
         if st.session_state.dashboards:
             st.write("### Existing Dashboards")
@@ -513,7 +538,6 @@ class InfowayApp():
                 save_dashboards()
                 st.success(f"✅ Dashboard '{new_name}' updated successfully!")
                 del st.session_state.edit_dashboard
-                st.rerun()
     def manage_roles(self):
         # --- Ensure state keys exist ---
         if "Dashboard_groups" not in st.session_state:
@@ -575,7 +599,6 @@ class InfowayApp():
                         }
                         save_roles()
                         st.success(f"Role '{new_role}' created with {len(selected_dashboards)} dashboards.")
-                        st.rerun()
                     else:
                         st.warning("Role already exists.")
                 else:
@@ -635,29 +658,26 @@ class InfowayApp():
                 save_roles()
                 st.success(f"Role '{new_name}' updated.")
                 st.session_state.pop("editing_role")
-                st.rerun()
-
             if st.button("❌ Cancel"):
                 st.session_state.pop("editing_role")
                 st.rerun()
     def manage_responsibilities(self):
         st.header("Manage Responsibilities")
-
         # Ensure RESP is a dict
-        if "RESPONSIBILITIES" not in st.session_state or not isinstance(st.session_state.RESPONSIBILITIES, dict):
-            st.session_state.RESPONSIBILITIES = {}
+        if "RESPONSIBILITIES" not in st.session_state:
+          st.session_state.RESPONSIBILITIES = load_responsibilities()
+        if not isinstance(st.session_state.RESPONSIBILITIES, dict):
+          st.session_state.RESPONSIBILITIES = {}
 
         # Input for new responsibility
         new_resp = st.text_input("Enter New Responsibility")
         selected_roles = st.multiselect("Roles", list(st.session_state.ROLES_MAP))
-
         if st.button("Add Responsibility"):
             if new_resp and selected_roles:
                 if new_resp not in st.session_state.RESPONSIBILITIES:
                     st.session_state.RESPONSIBILITIES[new_resp] = selected_roles
                     save_responsibilities()
                     st.success(f"Responsibility '{new_resp}' added for roles: {', '.join(selected_roles)}")
-                    st.rerun()
                 else:
                     st.warning("Responsibility already exists.")
             else:
@@ -667,18 +687,32 @@ class InfowayApp():
         st.subheader("Existing Responsibilities")
 
         if st.session_state.RESPONSIBILITIES:
-            respons = [
-                {"Responsibilities": resp, "Roles": ", ".join(roles)}
-                for resp, roles in sorted(st.session_state.RESPONSIBILITIES.items())
-            ]
-            df_resps = pd.DataFrame(respons)
-            st.dataframe(df_resps, use_container_width=True)
+            for resp, roles in sorted(st.session_state.RESPONSIBILITIES.items()):
+                # Make responsibility name a clickable hyperlink
+                # Alternative clickable using st.button but styled as link
+                cols = st.columns([3, 5])
+                if cols[0].button(resp, key=f"edit_{resp}", help="Click to edit", type="secondary"):
+                    st.session_state.edit_resp = resp
+                    st.session_state.edit_roles = roles
+                cols[1].write(", ".join(roles))
+
+            # If editing
+            if "edit_resp" in st.session_state:
+                st.markdown("---")
+                st.subheader(f"Edit Responsibility: {st.session_state.edit_resp}")
+                edited_resp = st.text_input("Responsibility Name", st.session_state.edit_resp)
+                edited_roles = st.multiselect("Roles", list(st.session_state.ROLES_MAP), default=st.session_state.edit_roles)
+                if st.button("Save Changes"):
+                    # Remove old key if renamed
+                    if edited_resp != st.session_state.edit_resp:
+                        st.session_state.RESPONSIBILITIES.pop(st.session_state.edit_resp)
+                    st.session_state.RESPONSIBILITIES[edited_resp] = edited_roles
+                    save_responsibilities()
+                    st.success("Responsibility updated!")
+                    st.session_state.pop("edit_resp")
+                    st.session_state.pop("edit_roles")
         else:
             st.info("No responsibilities yet.")
-
-    
-  
-
     def manage_users(self):
         st.header("User Access")
 
@@ -729,13 +763,16 @@ class InfowayApp():
         if is_edit_mode:
             user_data = st.session_state.USERS[user_to_edit]
             default_email = user_data[2]
-            saved_responsibilities = user_data[1]  # now stores responsibilities
+            saved_responsibilities = user_data[1]  # responsibilities
+            inactive_default = user_data[3] if len(user_data) > 3 else False
+            is_admin_default = user_data[4] if len(user_data) > 4 else False
         else:
             default_email = ""
             saved_responsibilities = []
+            inactive_default = False
+            is_admin_default = False
 
         # Get available responsibilities
-
         available_responsibilities = list(st.session_state.setdefault("RESPONSIBILITIES", {}))
         valid_saved_responsibilities = [r for r in saved_responsibilities if r in available_responsibilities]
 
@@ -744,7 +781,11 @@ class InfowayApp():
             email = st.text_input("Email", value=default_email)
             password = st.text_input("Password (leave blank to keep same)", type="password")
 
-            # Change: Responsibilities instead of Roles
+            # ✅ Preserve checkbox values
+            inactive = st.checkbox("Inactive User", value=inactive_default)
+            is_admin = st.checkbox("Admin User", value=is_admin_default)
+
+            # Responsibilities instead of roles
             responsibilities = st.multiselect(
                 "Select Responsibilities",
                 available_responsibilities,
@@ -766,21 +807,24 @@ class InfowayApp():
                 hashed_pw = hash_password(password) if password else st.session_state.USERS[user_to_edit][0]
                 if username != user_to_edit:
                     del st.session_state.USERS[user_to_edit]
-                # Save responsibilities instead of roles
-                st.session_state.USERS[username] = [hashed_pw, responsibilities, email]
+
+                # ✅ Save with inactive & admin flags
+                st.session_state.USERS[username] = [hashed_pw, responsibilities, email, inactive, is_admin]
                 st.success("User updated successfully")
+
             else:
                 if username in st.session_state.USERS:
                     st.warning("Username already exists")
                 else:
                     hashed_pw = hash_password(password)
-                    st.session_state.USERS[username] = [hashed_pw, responsibilities, email]
+                    st.session_state.USERS[username] = [hashed_pw, responsibilities, email, inactive, is_admin]
                     st.success("User created successfully")
 
             save_users(st.session_state.USERS)
             st.session_state.show_create_user_form = False
             st.session_state._editing_user = None
             st.rerun()
+
 
 
     def user_dashboard(self):
@@ -802,12 +846,12 @@ class InfowayApp():
                 st.subheader("Your Responsibilities")
                 for resp in responsibilities:
                     st.success(f"✅ {resp}")
-           # if "View Sales Chart" in responsibilities:
-            #    st.subheader("Sales Dashboard")
-             #   self.show_sales_chart()
-            #if "Budgeting Access" in responsibilities:
-             #   st.subheader("Budgeting Section")
-              #  self.show_budgeting_section()
+            if "View Sales Chart" in responsibilities:
+                st.subheader("Sales Dashboard")
+                self.show_sales_chart()
+            if "Budgeting Access" in responsibilities:
+                st.subheader("Budgeting Section")
+                self.show_budgeting_section()
             if "View Purchase Chart" in responsibilities:
                 st.subheader("Purchase Dashboard")
                 self.purchase()
@@ -827,30 +871,30 @@ class InfowayApp():
         st.success("Logged out successfully!")
         st.rerun()
 
-    #def show_sales_chart(self):
-        #st.subheader("Sales Data Charts")
-        #if not os.path.exists("data/sales_data.csv"):
-         #   st.error("Your file does not exist")
-          #  return
-        #df = pd.read_csv("data/sales_data.csv")
-        #st.dataframe(df)
-        #st.bar_chart(data=df, x="City", y="Total")
-        #data = {'Name': ['Omkar', 'Lakshman', 'Ajay'], 'Sales': [24, 25, 23], 'Location': ['Nellore', 'Chennai', 'Hyderabad']}
-        #df_chart = pd.DataFrame(data)
-        #st.title("Sales")
-        #fig, ax = plt.subplots()
-        #ax.bar(df_chart["Name"], df_chart["Sales"], color="blue")
-        #ax.set_title("Sales by Person")
-        #ax.set_xlabel("Name")
-        #ax.set_ylabel("Sales")
-        #st.pyplot(fig)
+    def show_sales_chart(self):
+        st.subheader("Sales Data Charts")
+        if not os.path.exists("data/sales_data.csv"):
+            st.error("Your file does not exist")
+            return
+        df = pd.read_csv("data/sales_data.csv")
+        st.dataframe(df)
+        st.bar_chart(data=df, x="City", y="Total")
+        data = {'Name': ['Omkar', 'Lakshman', 'Ajay'], 'Sales': [24, 25, 23], 'Location': ['Nellore', 'Chennai', 'Hyderabad']}
+        df_chart = pd.DataFrame(data)
+        st.title("Sales")
+        fig, ax = plt.subplots()
+        ax.bar(df_chart["Name"], df_chart["Sales"], color="blue")
+        ax.set_title("Sales by Person")
+        ax.set_xlabel("Name")
+        ax.set_ylabel("Sales")
+        st.pyplot(fig)
 
-    #def show_budgeting_section(self):
-     #   st.write("📋 This is the budgeting area.")
-      #  budget_data = {"Department": ["Sales", "Marketing", "HR"], "Budget": [150000, 100000, 80000]}
-       # df_budget = pd.DataFrame(budget_data)
-        #st.dataframe(df_budget)
-        #st.bar_chart(df_budget.set_index("Department"))
+    def show_budgeting_section(self):
+        st.write("📋 This is the budgeting area.")
+        budget_data = {"Department": ["Sales", "Marketing", "HR"], "Budget": [150000, 100000, 80000]}
+        df_budget = pd.DataFrame(budget_data)
+        st.dataframe(df_budget)
+        st.bar_chart(df_budget.set_index("Department"))
     def purchase_dashboard(self):
         st.title("Dashboards of Purchase module")
         self.purchase()
