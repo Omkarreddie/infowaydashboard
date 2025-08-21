@@ -1,17 +1,18 @@
 import streamlit as st
 import os
+import matplotlib.pyplot as plt
 import pandas as pd
 from PIL import Image
 import pickle
 import hashlib,random,smtplib
 from email.mime.text import MIMEText
-import matplotlib.pyplot as plt
 import PyPDF2
 import numpy as np
 import base64
-import seaborn as sns # type: ignore
-# Make sure to set wide layout first
-
+import seaborn as sns 
+import random 
+import smtplib
+from email.mime.text import MIMEText
 
 
 def image_to_base64(image_path):
@@ -21,6 +22,9 @@ def image_to_base64(image_path):
 # -------------------------- Utility Functions --------------------------
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(stored_password,provided_password):
+    return stored_password==hash_password(provided_password)
 
 def save_users(users):
     with open("pickle_files/users.pkl", "wb") as f:
@@ -104,11 +108,36 @@ def load_responsibilities():
                 return {r: [] for r in data}
     return {}
 
+def generate_otp():
+    return str(random.randint(10000,100000))
+def send_email_otp(to_email, otp):
+    # Replace below with your real email credentials
+    sender_email = "omkaradireddy143@gmail.com"
+    sender_password = "mmih jxwl suoj xvti"  # Use App Password for Gmail
+
+    msg = MIMEText(f"Your OTP for password reset is: {otp}")
+    msg['Subject'] = "Password Reset OTP"
+    msg['From'] = sender_email
+    msg['To'] = to_email
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(sender_email, sender_password)
+            server.send_message(msg)
+            st.success("OTP sent to Successfully ")
+    except Exception as e:
+        st.error(f"Failed to send email: {e}")
+      
+   
+
 # -------------------------- Main App Class --------------------------
 class InfowayApp():
     def __init__(self):
         if 'logged_in' not in st.session_state:
             st.session_state.logged_in = False
+        if "show_otp_form" not in st.session_state:
+            st.session_state.show_otp_form = False
+        if "page" not in st.session_state:
+            st.session_state.page = "login"
         if 'username' not in st.session_state:
             st.session_state.username = ""
         if 'role' not in st.session_state:
@@ -204,48 +233,90 @@ class InfowayApp():
 
        # Inputs
         # Inputs
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
+            # ---------------- LOGIN FORM ----------------
+            # ---------------- LOGIN PAGE ----------------
+        if st.session_state.page == "login":
+            username = st.text_input("Username", key="login_username")
+            password = st.text_input("Password", type="password", key="login_password")
 
-        if st.button("Login"):
-            if username in st.session_state.USERS:
-                user_data = st.session_state.USERS[username]
+            if st.button("Login", key="login_btn"):
+                if username in st.session_state.USERS:
+                    user_data = st.session_state.USERS[username]
+                    stored_password = user_data[0]
+                    user_roles = user_data[1]
+                    email = user_data[2]
+                    inactive = user_data[3]
+                    is_admin = user_data[4]
 
-                stored_password = user_data[0]
-                user_role = user_data[1]
-                email = user_data[2]
-                inactive = user_data[3] 
-                is_admin = user_data[4] 
-
-                # 🚫 Block inactive users, but NOT admins
-                if inactive and not is_admin:
-                    st.error("🚫 This user account is inactive. Please contact Admin.")
-                elif hash_password(password) == stored_password:
-                    st.session_state.logged_in = True
-                    st.session_state.username = username
-
-                    # ✅ Admin override
-                    if is_admin:
-                        st.session_state.role = "admin"
+                    if inactive and not is_admin:
+                        st.error("🚫 This user account is inactive. Please contact Admin.")
+                    elif verify_password(stored_password, password):
+                        st.session_state.logged_in = True
+                        st.session_state.username = username
+                        st.session_state.role = "admin" if is_admin else (user_roles[0] if user_roles else "user")
+                        st.success("✅ Login Successful")
+                        st.rerun()
                     else:
-                        # responsibilities is a list -> pick first if available
-                        st.session_state.role = user_role[0] if isinstance(user_role, list) and user_role else "user"
-
-                    st.success("✅ Login Successful")
-                    st.rerun()
-        
+                        st.error("Invalid Username or Password")
                 else:
                     st.error("Invalid Username or Password")
-            else:
-                st.error("Invalid Username or Password")
 
-        elif st.button("Forgot Password"):
-            st.session_state.page = "forgot_password"
+            if st.button("Forgot Password", key="forgot_pwd_btn"):
+                st.session_state.page = "forgot_password"
 
 
+        # ---------------- FORGOT PASSWORD PAGE ----------------
+        if st.session_state.get("page") == "forgot_password":
+            st.subheader("Reset your password using OTP")
+            forgot_email = st.text_input("Enter your registered email", key="forgot_email_input")
 
+            if st.button("Send OTP", key="send_otp_btn"):
+                # Find username by email
+                found_user = None
+                for uname, data in st.session_state.USERS.items():
+                    if data[2] == forgot_email:
+                        found_user = uname
+                        break
+
+                if found_user:
+                    otp = str(generate_otp()).zfill(6) 
+                    st.session_state.otp = otp
+                    st.session_state.reset_email = forgot_email
+                    st.session_state.show_otp_form = True
+                    send_email_otp(forgot_email, otp)
+                else:
+                    st.error("Email not found!")
+
+
+        # ---------------- OTP FORM ----------------
+        if st.session_state.get("show_otp_form"):
+            entered_otp = st.text_input("Enter OTP", key="otp_input_field")
+            new_password = st.text_input("Enter new password", type="password", key="otp_new_pwd")
+            confirm_password = st.text_input("Confirm new password", type="password", key="otp_confirm_pwd")
+
+            if st.button("Reset Password", key="reset_pwd_btn"):
+                if str(entered_otp).strip() == str(st.session_state.get("otp")):
+                    if new_password == confirm_password:
+                        # Update password
+                        for uname, data in st.session_state.USERS.items():
+                            if data[2] == st.session_state.reset_email:
+                                st.session_state.USERS[uname][0] = hash_password(new_password)
+                                break
+                        save_users(st.session_state.USERS)
+                        st.success("✅ Password reset successfully!")
+                        st.session_state.show_otp_form = False
+                        st.session_state.page = "login"
+                        st.rerun()
+                    else:
+                        st.error("Passwords do not match")
+                else:
+                    st.error("Invalid OTP")
+
+            # -----------------------
+    # Run login
+    # -----------------------
         st.markdown("</div></div>", unsafe_allow_html=True)
-           
+            
 
 
     def admin_dashboard(self):
@@ -723,6 +794,7 @@ class InfowayApp():
 
         if st.session_state.get("show_create_user_form", False):
             self.createuser()
+            st.rerun()
 
         st.subheader("Registered Users")
 
