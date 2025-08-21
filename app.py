@@ -156,7 +156,6 @@ class InfowayApp():
             st.session_state.dashboards=load_dashboards()
     def run(self):
         if not st.session_state.USERS:
-            self.initial_admin_setup()
             return
         if st.session_state.logged_in:
             role = st.session_state.role.strip().lower()
