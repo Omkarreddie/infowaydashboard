@@ -4,4 +4,3 @@ pandas
 numpy
 PyPDF2
 seaborn
-random
