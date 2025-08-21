@@ -793,7 +793,6 @@ class InfowayApp():
 
         if st.session_state.get("show_create_user_form", False):
             self.createuser()
-            st.rerun()
 
         st.subheader("Registered Users")
 
