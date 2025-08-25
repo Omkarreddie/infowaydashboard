@@ -4,8 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from PIL import Image
 import pickle
-import hashlib,random,smtplib
-from email.mime.text import MIMEText
+import hashlib
 import PyPDF2
 import numpy as np
 import base64
@@ -13,8 +12,7 @@ import seaborn as sns
 import random 
 import smtplib
 from email.mime.text import MIMEText
-
-
+from datetime import datetime
 def image_to_base64(image_path):
     with open(image_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode()
@@ -159,6 +157,8 @@ class InfowayApp():
             return
         if st.session_state.logged_in:
             role = st.session_state.role.strip().lower()
+            
+            
             if role == "admin":
                 self.admin_dashboard()
             #elif role in ["user", "salesmanager", "salesman1", "salesman2",
@@ -174,66 +174,43 @@ class InfowayApp():
             self.login()
 
     def login(self):
-        # Custom CSS for styling
+        # Custom CSS
         st.markdown("""
             <style>
-                /* Full page background */
-                .stApp {
-                    background: linear-gradient(135deg, #1e3c72, #2a5298);
-                    background-attachment: fixed;
-                }
-
-
-                /* Logo styling */
+                .stApp { background: #e3f2fd; }
                 .login-logo {
-                    width: 120px;
-                    height: 120px;
-                    border-radius: 50%;
-                    object-fit: contain;
-                    border: 2px solid white;
-                    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-                    margin-bottom: 20px;
+                    width: 120px; height: 120px; border-radius: 50%;
+                    object-fit: contain; border: 3px solid #cccccc;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                    margin-bottom: 25px; transition: transform 0.3s ease;
                 }
-
-                /* Title styling */
+                .login-logo:hover { transform: scale(1.05); }
                 .login-title {
-                    color: white;
-                    font-size: 22px;
-                    font-weight: bold;
-                    margin-bottom: 20px;
+                    color: #2a2a2a; font-size: 26px; font-weight: bold;
+                    margin-bottom: 25px;
                 }
-
-                /* Input labels */
-                label {
-                    color: white !important;
-                    font-weight: bold;
-                }
-
-                /* Button styling */
+                label { color: #333333 !important; font-weight: bold; font-size: 14px; }
                 div.stButton > button {
-                    width: 100%;
-                    background-color: #2a5298;
-                    color: white;
-                    height: 40px;
-                    font-size: 16px;
-                    border-radius: 8px;
+                    width: 100%; background: #42a5f5; color: white;
+                    height: 45px; font-size: 16px; border-radius: 10px;
+                    border: none; box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+                    transition: all 0.3s ease-in-out;
+                }
+                div.stButton > button:hover {
+                    background: #1e88e5; transform: translateY(-2px);
+                    box-shadow: 0 5px 10px rgba(0,0,0,0.3);
                 }
             </style>
         """, unsafe_allow_html=True)
 
-        # Logo
+        # ✅ Logo
         st.markdown(
             f"<img src='data:image/jpg;base64,{image_to_base64('src/logo.jpg')}' class='login-logo'>",
             unsafe_allow_html=True
         )
-
-        # Title
         st.markdown("<div class='login-title'>Infoway Technosoft Solutions PVT LTD</div>", unsafe_allow_html=True)
 
-       # Inputs
-        # Inputs
-            # ---------------- LOGIN FORM ----------------
-            # ---------------- LOGIN PAGE ----------------
+        # ---------------- LOGIN PAGE ----------------
         if st.session_state.page == "login":
             username = st.text_input("Username", key="login_username")
             password = st.text_input("Password", type="password", key="login_password")
@@ -241,11 +218,12 @@ class InfowayApp():
             if st.button("Login", key="login_btn"):
                 if username in st.session_state.USERS:
                     user_data = st.session_state.USERS[username]
-                    stored_password = user_data[0]
-                    user_roles = user_data[1]
-                    email = user_data[2]
-                    inactive = user_data[3]
-                    is_admin = user_data[4]
+
+                    stored_password = user_data.get("password")
+                    user_roles = user_data.get("roles", [])
+                    email = user_data.get("email")
+                    inactive = user_data.get("inactive", False)
+                    is_admin = user_data.get("is_admin", False)
 
                     if inactive and not is_admin:
                         st.error("🚫 This user account is inactive. Please contact Admin.")
@@ -253,6 +231,14 @@ class InfowayApp():
                         st.session_state.logged_in = True
                         st.session_state.username = username
                         st.session_state.role = "admin" if is_admin else (user_roles[0] if user_roles else "user")
+
+                        # ✅ Track last activity
+                        st.session_state.USERS[username]["last_activity"] = {
+                            "status": True,
+                            "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        }
+                        save_users(st.session_state.USERS)
+
                         st.success("✅ Login Successful")
                         st.rerun()
                     else:
@@ -263,29 +249,27 @@ class InfowayApp():
             if st.button("Forgot Password", key="forgot_pwd_btn"):
                 st.session_state.page = "forgot_password"
 
-
         # ---------------- FORGOT PASSWORD PAGE ----------------
         if st.session_state.get("page") == "forgot_password":
-            st.subheader("Reset your password using OTP")
+            st.subheader("🔑 Reset your password using OTP")
             forgot_email = st.text_input("Enter your registered email", key="forgot_email_input")
 
             if st.button("Send OTP", key="send_otp_btn"):
-                # Find username by email
                 found_user = None
                 for uname, data in st.session_state.USERS.items():
-                    if data[2] == forgot_email:
+                    if data.get("email") == forgot_email:
                         found_user = uname
                         break
 
                 if found_user:
-                    otp = str(generate_otp()).zfill(6) 
+                    otp = str(generate_otp()).zfill(6)
                     st.session_state.otp = otp
                     st.session_state.reset_email = forgot_email
                     st.session_state.show_otp_form = True
                     send_email_otp(forgot_email, otp)
+                    st.info("📩 OTP sent to your email.")
                 else:
                     st.error("Email not found!")
-
 
         # ---------------- OTP FORM ----------------
         if st.session_state.get("show_otp_form"):
@@ -298,8 +282,8 @@ class InfowayApp():
                     if new_password == confirm_password:
                         # Update password
                         for uname, data in st.session_state.USERS.items():
-                            if data[2] == st.session_state.reset_email:
-                                st.session_state.USERS[uname][0] = hash_password(new_password)
+                            if data.get("email") == st.session_state.reset_email:
+                                st.session_state.USERS[uname]["password"] = hash_password(new_password)
                                 break
                         save_users(st.session_state.USERS)
                         st.success("✅ Password reset successfully!")
@@ -310,6 +294,7 @@ class InfowayApp():
                         st.error("Passwords do not match")
                 else:
                     st.error("Invalid OTP")
+
 
             # -----------------------
     # Run login
@@ -326,129 +311,162 @@ class InfowayApp():
         st.set_page_config(layout="wide")
 
         # Inject CSS
+        
         st.markdown("""
-        <style>
-        /* Sidebar buttons same size */
-        section[data-testid="stSidebar"] button {
-            width: 100% !important;
-            height: 45px !important;
-            margin: 0.25rem 0 !important;
-            padding: 0.5rem 0 !important;
-            border-radius: 6px !important;
-            text-align: center !important;
+    <style>
+        /* ================= Sidebar & Normal Buttons ================= */
+        section[data-testid="stSidebar"] button,
+        div.stButton > button {
+            width: 190px;
+            height: 45px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 16px;
+            color: white;
+            border: none;
+            background: linear-gradient(135deg, #89CFF0, #70B7FF); /* Soft pastel blue */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* soft shadow */
+            transition: all 0.3s ease-in-out;
         }
-        section[data-testid="stSidebar"] button:hover {
-            background-color: #f0f2f6 !important;
-            border: 1px solid #4a90e2 !important;
+
+        section[data-testid="stSidebar"] button:hover,
+        div.stButton > button:hover {
+            background: linear-gradient(135deg, #70B7FF, #5A9DFF); /* Slightly darker on hover */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
         }
-        /* Remove extra padding from main content */
+
+        /* ================= Tabs ================= */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 4px;
+            background-color: #F0F8FF;  /* Light soft background */
+            padding: 8px;
+            border-radius: 8px;
+        }
+
+        .stTabs [data-baseweb="tab"] {
+            padding: 8px 16px;
+            border-radius: 8px;
+            background-color: white;
+            border: 1px solid #CFE2F3;
+            color: #4178BE;
+            font-weight: 500;
+        }
+
+        .stTabs [aria-selected="true"] {
+            background: linear-gradient(135deg, #89CFF0, #70B7FF);
+            color: white !important;
+            font-weight: bold;
+            border: none;
+        }
+
+        /* ================= Main content padding ================= */
         div.block-container {
-            padding-top: 3rem !important;     /* no gap at top */
-            padding-bottom: 1rem !important;  /* keep little space at bottom */
-            padding-left: 1rem !important;    /* reduce left gap */
-            padding-right: 1rem !important;   /* reduce right gap */
+            padding-top: 2rem !important;
+            padding-bottom: 1rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
         }
-        </style>
+    </style>
     """, unsafe_allow_html=True)
+
+
         st.header("Admin Panel")
         st.sidebar.markdown("---")
 
-        if "sales_module_open" not in st.session_state:
-            st.session_state.sales_module_open = False
-        if st.sidebar.button("📦 Sales Dashboard"):
-           st.session_state.sales_module_open = not st.session_state.sales_module_open
-           st.session_state.page = None
+        if "active_module" not in st.session_state:
+            st.session_state.active_module = None
+        
+        if st.sidebar.button("Sales Module"):
+            st.session_state.active_module= "sales"
 
-        if st.session_state.sales_module_open:
-         #   if st.session_state.role in ["admin", "salesmanager", "salesman1","salesman2"]:
-                if st.sidebar.button("📊 View Sales Chart"):
-                   st.session_state.page = "sales_dashboard"
-            #if st.session_state.role in ["admin", "salesmanager"]:
-                if st.sidebar.button("📈 View Budgeting"):
-                   st.session_state.page = "budgeting"
-
-        if "purchase_open" not in st.session_state:
-            st.session_state.purchase_open = False
         if st.sidebar.button("📦 Purchase Module"):
-           st.session_state.purchase_open = not st.session_state.purchase_open
-           st.session_state.page = None
+            st.session_state.active_module = "purchase"
 
-        if st.session_state.purchase_open:
-                if st.sidebar.button("Purchase Dashboard"):
-                    st.session_state.page="purchase_dashborad"
-                if st.sidebar.button("LPO DATA"):
-                    st.session_state.page = "Lpo_data"
-                if st.sidebar.button("GRN DATA"):
-                    st.session_state.page = "Grn_data"
-                if st.sidebar.button("LPO GRN GROSS AMOUNT"):
-                    st.session_state.page = "lpo_grn_gross_amount"
-                if st.sidebar.button("LPO GRN NET VALUES"):
-                    st.session_state.page = "lpo_grn_net_values"
-
-        if "admin_menu_open" not in st.session_state:
-            st.session_state.admin_menu_open = False
-        if st.sidebar.button("👨‍💻 Admin Portal"):
-            st.text("Infoway Techno Soft Solutions")
-            st.markdown(
-            f"<img src='data:image/jpg;base64,{image_to_base64('src/logo.jpg')}' class='login-logo'>",
-            unsafe_allow_html=True
-        )
-            st.session_state.admin_menu_open = not st.session_state.admin_menu_open
-            st.session_state.page = None
-
-        if st.session_state.admin_menu_open:
-            with st.sidebar:
-                if st.button("📊 DashBoard Group"):
-                    st.session_state.page= "dashboard_groups"
-                if st.button("🏠 DashBoard"):
-                    st.session_state.page = "admin_dashboard"
-                if st.button("👥 Roles"):
-                    st.session_state.page = "roles"
-                if st.button("🧩 Responsibilities"):
-                    st.session_state.page = "responsibilities"
-                if st.button("🙋 Users"):
-                    st.session_state.page = "users"  
-
-        st.sidebar.markdown("---")
+        if st.sidebar.button("🛠️ Admin Portal"):
+            st.session_state.active_module = "admin"
+        
+        if st.session_state.active_module == "sales":
+                 #   if st.session_state.role in ["admin", "salesmanager", "salesman1","salesman2"]:
+            sales_tabs=st.tabs({
+                     "📊 View Sales Chart",
+                     "📈 View Budgeting"
+                 })
+            with sales_tabs[0]:
+                self.show_sales_chart()
+            with sales_tabs[1]:
+                self.show_budgeting_section()
         if st.sidebar.button("🚪 Logout"):
             self.logout() 
-        if st.session_state.get("page") == "dashboard_groups":
-            st.subheader("Dashboard Groups") 
-            self.dashboardgroups()
-        elif st.session_state.get("page") == "admin_dashboard":
-            st.subheader("🏠 Admin Dashboard")
-            self.dashboard()
-        elif st.session_state.get("page") == "roles":
-            self.manage_roles()
-        elif st.session_state.get("page") == "responsibilities":
-            self.manage_responsibilities()
-        elif st.session_state.get("page") == "users":
-            self.manage_users()
-        elif st.session_state.get("page") == "sales_dashboard":
-            st.subheader("📊 Sales Dashboard")
-            self.show_sales_chart()
-        elif st.session_state.get("page") == "budgeting":
-            st.subheader("📈 Budgeting Section")
-            self.show_budgeting_section()
-        elif st.session_state.get("page") == "purchase_dashborad":
-            st.subheader("Purchase Dashboard")
-            self.purchase_dashboard()
-        elif st.session_state.get("page") == "Lpo_data":
-            st.subheader("LPO DATA")
-            self.purchase()
-        elif st.session_state.get("page")=="Grn_data":
-            st.subheader("GRN DATA")
-            self.GRN()
-        elif st.session_state.get("page") == "lpo_grn_gross_amount":
-            st.subheader("LPO GRN GROSS AMOUNT")
-            self.lpo_grn_gross_amount()
-        elif st.session_state.get("page") == "lpo_grn_net_values":
-            st.subheader("LPO GRN NET VALUES")
-            self.lpo_grn_net_values()
+            st.success("Logout Successfully")
+            st.rerun()
+        # ========== PURCHASE MODULE ==========
+        elif st.session_state.active_module == "purchase":
+                purchase_tabs = st.tabs([
+                "📊 Purchase Dashboard",
+                "📑 LPO DATA",
+                "📦 GRN DATA",
+                "💰 LPO GRN Gross Amount",
+                "📉 LPO GRN Net Values"
+            ])
+
+                # Tab 0: Show all data together
+                with purchase_tabs[0]:
+                    st.subheader("Purchase Dashboard")
+                # Tab 1: LPO DATA only
+                with purchase_tabs[1]:
+                    st.subheader("LPO DATA")
+                    self.lpo_data()
+
+                # Tab 2: GRN DATA only
+                with purchase_tabs[2]:
+                    st.subheader("GRN DATA")
+                    self.GRN()
+
+                # Tab 3: LPO GRN Gross Amount only
+                with purchase_tabs[3]:
+                    st.subheader("LPO GRN Gross Amount")
+                    self.lpo_grn_gross_amount()
+
+                # Tab 4: LPO GRN Net Values only
+                with purchase_tabs[4]:
+                    st.subheader("LPO GRN Net Values")
+                    self.lpo_grn_net_values()
+
+        # ========== ADMIN MODULE ==========
+        elif st.session_state.active_module == "admin":
+
+            admin_tabs = st.tabs([
+                "📊 Dashboard Groups",
+                "🏠 Dashboard",
+                "👥 Roles",
+                "🧩 Responsibilities",
+                "🙋 Users"
+            ])
+
+            with admin_tabs[0]:
+                self.dashboardgroups()
+
+            with admin_tabs[1]:
+                self.dashboard()
+
+            with admin_tabs[2]:
+                self.manage_roles()
+
+            with admin_tabs[3]:
+                self.manage_responsibilities()
+
+            with admin_tabs[4]:
+                self.manage_users()
     def dashboardgroups(self):
         st.subheader("📊 Dashboard Groups")
 
-        # ✅ Ensure dict format in session state
+        if st.button("➕ New Group"):
+                st.session_state.add_group_page = True
+                st.rerun()
+
+
+        # --- Initialize session state ---
         if "Dashboard_groups" not in st.session_state:
             st.session_state.Dashboard_groups = load_dashboard_groups()
 
@@ -458,75 +476,84 @@ class InfowayApp():
             }
             save_dashboard_groups()
 
-        # --- Add new group form ---
-        st.text_input("Group Name", key="new_grp_input")
-        st.text_input("Description", key="desc_input")
+        if "add_group_page" not in st.session_state:
+            st.session_state.add_group_page = False
+        if "edit_group" not in st.session_state:
+            st.session_state.edit_group = None
 
-        def add_group():
-            new_grp = st.session_state.new_grp_input
-            desc = st.session_state.desc_input
-
-            if not new_grp:
-                st.warning("Group name cannot be empty.")
-            elif new_grp in st.session_state.Dashboard_groups:
-                st.warning("Duplicate group name.")
-            else:
-                st.session_state.Dashboard_groups[new_grp] = {"Description": desc}
-                save_dashboard_groups()
-                st.success(f"✅ Dashboard group '{new_grp}' added successfully!")
-                st.session_state.new_grp_input = ""
-                st.session_state.desc_input = ""
-
-        st.button("Add Group Name", on_click=add_group)
-
-        # --- Show existing groups in table ---
-        if st.session_state.Dashboard_groups:
-            st.write("### Existing Dashboard Groups")
-
-            # Table header
-            cols = st.columns([2, 4])  
-            cols[0].markdown("**Group Name**")
-            cols[1].markdown("**Description**")
-
-            # Table rows
-            for g, d in st.session_state.Dashboard_groups.items():
+        # --- MAIN LIST PAGE ---
+        if not st.session_state.add_group_page and st.session_state.edit_group is None:
+            st.write("### Dashboard Groups")
+            if st.session_state.Dashboard_groups:
                 cols = st.columns([2, 4])
-                with cols[0]:
-                    if st.button(g, key=f"link_{g}"):
-                        st.session_state.edit_group = g
-                        st.rerun()
-                with cols[1]:
-                    st.write(d["Description"])
+                cols[0].markdown("**Group Name**")
+                cols[1].markdown("**Description**")
 
-        # --- Edit mode ---
-        if "edit_group" in st.session_state:
+                for g, d in st.session_state.Dashboard_groups.items():
+                    row_cols = st.columns([2, 4])
+                    with row_cols[0]:
+                        if st.button(g, key=f"group_{g}"):
+                            st.session_state.edit_group = g
+                            st.rerun()
+                    with row_cols[1]:
+                        st.write(d["Description"])
+            else:
+                st.info("No dashboard groups added yet.")
+
+        # --- ADD GROUP PAGE ---
+        if st.session_state.add_group_page:
+            st.subheader("🆕 Add New Dashboard Group")
+            group_name = st.text_input("Group Name", key="new_grp_name")
+            group_desc = st.text_input("Description", key="new_grp_desc")
+
+            if st.button("Add Group"):
+                if not group_name:
+                    st.warning("Group name cannot be empty.")
+                elif group_name in st.session_state.Dashboard_groups:
+                    st.warning("Duplicate group name.")
+                else:
+                    st.session_state.Dashboard_groups[group_name] = {"Description": group_desc}
+                    save_dashboard_groups()
+                    st.success(f"✅ Group '{group_name}' added successfully!")
+                    st.session_state.add_group_page = False
+                    st.session_state.new_grp_name = ""
+                    st.session_state.new_grp_desc = ""
+                    st.rerun()
+
+            if st.button("⬅️ Cancel"):
+                st.session_state.add_group_page = False
+                st.rerun()
+
+        # --- EDIT GROUP PAGE ---
+        if st.session_state.edit_group is not None:
             g = st.session_state.edit_group
             st.subheader(f"✏️ Edit Group: {g}")
-
-            st.text_input("Edit Group Name", g, key="edit_name_input")
-            st.text_input(
+            new_name = st.text_input("Edit Group Name", value=g, key="edit_name_input")
+            new_desc = st.text_input(
                 "Edit Description",
-                st.session_state.Dashboard_groups[g]["Description"],
+                value=st.session_state.Dashboard_groups[g]["Description"],
                 key="edit_desc_input"
             )
 
-            def update_group():
-                new_name = st.session_state.edit_name_input
-                new_desc = st.session_state.edit_desc_input
-                if new_name != g:
-                    st.session_state.Dashboard_groups.pop(g)
-                st.session_state.Dashboard_groups[new_name] = {"Description": new_desc}
-                save_dashboard_groups()
-                st.success(f"✅ Group '{new_name}' updated successfully!")
-                del st.session_state.edit_group
+            if st.button("Update"):
+                if not new_name:
+                    st.warning("Group name cannot be empty.")
+                else:
+                    if new_name != g:
+                        st.session_state.Dashboard_groups.pop(g)
+                    st.session_state.Dashboard_groups[new_name] = {"Description": new_desc}
+                    save_dashboard_groups()
+                    st.success(f"✅ Group '{new_name}' updated successfully!")
+                    st.session_state.edit_group = None
+                    st.rerun()
 
-            st.button("Update Group", on_click=update_group)
-   # Dashboard function
+            if st.button("⬅️ Cancel"):
+                st.session_state.edit_group = None
+                st.rerun()
+
+
     def dashboard(self):
         st.subheader("📊 Dashboards")
-
-        # --- Ensure dashboards exists and is a dict ---
-        
 
         # --- Prepare dashboard groups list ---
         dashboard_groups = st.session_state.get("Dashboard_groups", {})
@@ -537,365 +564,453 @@ class InfowayApp():
         else:
             dashboard_groups_list = []
 
-        # --- Form for new dashboard ---
-        selected_db_grp = st.multiselect("Dashboard Group", dashboard_groups_list)
-        dashboard_name = st.text_input("Dashboard Name")
+        # --- Initialize session state flags ---
+        if "add_dashboard_page" not in st.session_state:
+            st.session_state.add_dashboard_page = False
+        if "edit_dashboard" not in st.session_state:
+            st.session_state.edit_dashboard = None
 
-        # Auto-generate Dashboard ID
-        if st.session_state.dashboards:
-            max_id = max([int(details["id"]) for details in st.session_state.dashboards.values()])
-            dashboard_id = f"{max_id + 1:04d}"
-        else:
-            dashboard_id = "0001"
+        # --- MAIN LIST PAGE ---
+        if not st.session_state.add_dashboard_page and st.session_state.edit_dashboard is None:
+            if st.button("➕ New Dashboard"):
+                st.session_state.add_dashboard_page = True
+                st.rerun()
 
-        st.write(f"Dashboard ID: {dashboard_id}")
-
-        # --- Add Dashboard button ---
-        if st.button("Add Dashboard"):
-            if not dashboard_name or not selected_db_grp:
-                st.warning("Please provide a dashboard name and select at least one group.")
-            elif dashboard_name in st.session_state.dashboards:
-                st.warning("Dashboard name already exists.")
-            else:
-                st.session_state.dashboards[dashboard_name] = {
-                    "id": dashboard_id,
-                    "groups": selected_db_grp
-                }
-                save_dashboards()  # Save to pickle
-                st.success(f"✅ Dashboard '{dashboard_name}' added successfully with ID {dashboard_id}!")
-        # --- Show existing dashboards in table ---
-        if st.session_state.dashboards:
-            st.write("### Existing Dashboards")
-
-            # Table header
-            cols = st.columns([2, 2, 4])
-            cols[0].markdown("**Dashboard ID**")
-            cols[1].markdown("**Dashboard Name**")
-            cols[2].markdown("**Groups**")
-
-            # Table rows
-            for d_name, details in st.session_state.dashboards.items():
+            st.subheader("Dashboards")
+            if st.session_state.dashboards:
                 cols = st.columns([2, 2, 4])
-                with cols[0]:
-                    st.write(details["id"])
-                with cols[1]:
-                    if st.button(d_name, key=f"link_{d_name}"):  # hyperlink style
-                        st.session_state.edit_dashboard = d_name
-                        st.rerun()
-                with cols[2]:
-                    st.write(", ".join(details["groups"]))
+                cols[0].markdown("**Dashboard ID**")
+                cols[1].markdown("**Dashboard Name**")
+                cols[2].markdown("**Groups**")
 
-        # --- Edit mode ---
-        if "edit_dashboard" in st.session_state:
+                for d_name, details in st.session_state.dashboards.items():
+                    row_cols = st.columns([2, 2, 4])
+                    with row_cols[0]:
+                        st.write(details["id"])
+                    with row_cols[1]:
+                        if st.button(d_name, key=f"dashboard_{d_name}"):
+                            st.session_state.edit_dashboard = d_name
+                            st.rerun()
+                    with row_cols[2]:
+                        st.write(", ".join(details["groups"]))
+            else:
+                st.info("No dashboards added yet.")
+
+        # --- ADD DASHBOARD PAGE ---
+        if st.session_state.add_dashboard_page:
+            st.subheader("🆕 Add New Dashboard")
+            new_name = st.text_input("Dashboard Name", key="new_db_name")
+            selected_groups = st.multiselect("Dashboard Group", options=dashboard_groups_list, key="new_db_groups")
+
+            # Auto-generate Dashboard ID
+            if st.session_state.dashboards:
+                max_id = max([int(details["id"]) for details in st.session_state.dashboards.values()])
+                dashboard_id = f"{max_id + 1:04d}"
+            else:
+                dashboard_id = "0001"
+            st.write(f"Dashboard ID: {dashboard_id}")
+
+            if st.button("Add Dashboard"):
+                if not new_name or not selected_groups:
+                    st.warning("Please provide a dashboard name and select at least one group.")
+                elif new_name in st.session_state.dashboards:
+                    st.warning("Dashboard name already exists.")
+                else:
+                    st.session_state.dashboards[new_name] = {
+                        "id": dashboard_id,
+                        "groups": selected_groups
+                    }
+                    save_dashboards()
+                    st.success(f"✅ Dashboard '{new_name}' added successfully!")
+                    st.session_state.add_dashboard_page = False
+                    st.rerun()
+
+            if st.button("⬅️ Cancel"):
+                st.session_state.add_dashboard_page = False
+                st.rerun()
+
+        # --- EDIT DASHBOARD PAGE ---
+        if st.session_state.edit_dashboard is not None:
             d_name = st.session_state.edit_dashboard
-            st.subheader(f"✏️ Edit Dashboard: {d_name}")
-            
-            new_name = st.text_input("Edit Dashboard Name", d_name)
-            new_groups = st.multiselect(
-                "Edit Groups",
-                dashboard_groups_list,
-                default=st.session_state.dashboards[d_name]["groups"]
-            )
-            new_id = st.text_input("Dashboard ID", st.session_state.dashboards[d_name]["id"], disabled=True)
+            details = st.session_state.dashboards[d_name]
 
-            if st.button("Update Dashboard"):
-                if new_name != d_name:
-                    st.session_state.dashboards.pop(d_name)
-                st.session_state.dashboards[new_name] = {
-                    "id": new_id,
-                    "groups": new_groups
-                }
-                save_dashboards()
-                st.success(f"✅ Dashboard '{new_name}' updated successfully!")
-                del st.session_state.edit_dashboard
+            st.subheader(f"✏️ Edit Dashboard: {d_name}")
+            new_name = st.text_input("Dashboard Name", value=d_name, key="edit_db_name")
+            selected_groups = st.multiselect(
+                "Dashboard Groups",
+                options=dashboard_groups_list,
+                default=details["groups"],
+                key="edit_db_groups"
+            )
+            dashboard_id = st.text_input("Dashboard ID", value=details["id"], disabled=True)
+
+            if st.button("Update"):
+                if not new_name or not selected_groups:
+                    st.warning("Please provide a name and select at least one group.")
+                else:
+                    if new_name != d_name:
+                        st.session_state.dashboards.pop(d_name)
+                    st.session_state.dashboards[new_name] = {
+                        "id": dashboard_id,
+                        "groups": selected_groups
+                    }
+                    save_dashboards()
+                    st.success(f"✅ Dashboard '{new_name}' updated successfully!")
+                    st.session_state.edit_dashboard = None
+                    st.rerun()
+
+            if st.button("⬅️ Cancel"):
+                st.session_state.edit_dashboard = None
+                st.rerun()
+
     def manage_roles(self):
-        # --- Ensure state keys exist ---
+        st.header("👤 Manage Roles")
+
+        # --- Initialize session state ---
+        if "ROLES_MAP" not in st.session_state:
+            st.session_state.ROLES_MAP = {}
+        if "add_role_page" not in st.session_state:
+            st.session_state.add_role_page = False
+        if "edit_role" not in st.session_state:
+            st.session_state.edit_role = None
         if "Dashboard_groups" not in st.session_state:
             st.session_state.Dashboard_groups = set()
-
         if "dashboards" not in st.session_state:
             st.session_state.dashboards = {}
 
-        if "ROLES_MAP" not in st.session_state:
-            st.session_state.ROLES_MAP = {}
-
-        st.header("Manage Roles")
-
-        # --- Get column names from purchase data ---
+        # --- Combined options for groups ---
         try:
             df = self.load_purchase_data()
             column_names = list(df.columns)
         except Exception:
             column_names = []
-
-        # Combine options: existing groups + column names
         combined_options = sorted(set(st.session_state.Dashboard_groups).union(column_names))
 
-        # --- Add new role ---
-        if not combined_options:
-            st.warning("No Dashboard groups or data columns defined yet.")
-        else:
-            new_role = st.text_input("Enter New Role").strip()
-            selected_groups = st.multiselect(
-                "Dashboard Groups",
-                options=combined_options
-            )
+        # --- MAIN LIST PAGE ---
+        if not st.session_state.add_role_page and st.session_state.edit_role is None:
+            if st.button("➕ New Role"):
+                st.session_state.add_role_page = True
+                st.rerun()
+
+            st.subheader("Roles")
+            if st.session_state.ROLES_MAP:
+                cols = st.columns([3, 5])
+                cols[0].markdown("**Role Name**")
+                cols[1].markdown("**Groups**")
+
+                for role, data in sorted(st.session_state.ROLES_MAP.items()):
+                    row_cols = st.columns([3, 5])
+                    with row_cols[0]:
+                        if st.button(role, key=f"role_{role}"):
+                            st.session_state.edit_role = role
+                            st.rerun()
+                    with row_cols[1]:
+                        st.write(", ".join(data.get("groups", [])))
+            else:
+                st.info("No roles defined yet.")
+
+        # --- ADD ROLE PAGE ---
+        if st.session_state.add_role_page:
+            st.subheader("🆕 Add New Role")
+            new_role = st.text_input("Enter New Role", key="new_role").strip()
+            selected_groups = st.multiselect("Dashboard Groups", options=combined_options, key="new_role_groups")
 
             selected_dashboards = []
-
-            # Show dashboards belonging to selected groups
-            if selected_groups and "dashboards" in st.session_state:
+            if selected_groups:
                 st.markdown("**Select Dashboards for this Role:**")
-                dashboards_found = False
                 for name, details in st.session_state.dashboards.items():
                     if any(group in details["groups"] for group in selected_groups):
-                        dashboards_found = True
-                        checkbox_key = f"select_{name}"
-                        if st.checkbox(
-                            f"{details['id']} - {name} ({', '.join(details['groups'])})",
-                            key=checkbox_key
-                        ):
+                        if st.checkbox(f"{details['id']} - {name} ({', '.join(details['groups'])})", key=f"add_chk_{name}"):
                             selected_dashboards.append(name)
 
-                if not dashboards_found:
-                    st.info("No dashboards found in the selected groups.")
-
             if st.button("Add Role"):
-                if new_role and selected_groups:
-                    if new_role not in st.session_state.ROLES_MAP:
-                        st.session_state.ROLES_MAP[new_role] = {
-                            "groups": selected_groups,
-                            "dashboards": selected_dashboards
-                        }
-                        save_roles()
-                        st.success(f"Role '{new_role}' created with {len(selected_dashboards)} dashboards.")
-                    else:
-                        st.warning("Role already exists.")
+                if not new_role or not selected_groups:
+                    st.warning("Please enter a role name and select at least one group.")
+                elif new_role in st.session_state.ROLES_MAP:
+                    st.warning("Role already exists.")
                 else:
-                    st.warning("Enter a role, select dashboard groups, and choose dashboards.")
-
-        # --- Existing Roles ---
-        st.markdown("---")
-        st.subheader("Existing Roles")
-
-        if st.session_state.ROLES_MAP:
-            for role, data in sorted(st.session_state.ROLES_MAP.items()):
-                # clickable role name (acts like hyperlink)
-                if st.button(role, key=f"edit_{role}"):
-                    st.session_state.editing_role = role
+                    st.session_state.ROLES_MAP[new_role] = {
+                        "groups": selected_groups,
+                        "dashboards": selected_dashboards
+                    }
+                    save_roles()
+                    st.success(f"✅ Role '{new_role}' created successfully!")
+                    st.session_state.add_role_page = False
                     st.rerun()
-        else:
-            st.info("No roles defined yet.")
 
-        # --- Edit Role Form ---
-        if "editing_role" in st.session_state:
-            role_to_edit = st.session_state.editing_role
-            role_data = st.session_state.ROLES_MAP[role_to_edit]
+            if st.button("⬅️ Cancel"):
+                st.session_state.add_role_page = False
+                st.rerun()
 
-            st.markdown("---")
+        # --- EDIT ROLE PAGE ---
+        if st.session_state.edit_role is not None:
+            role_to_edit = st.session_state.edit_role
+            role_data = st.session_state.ROLES_MAP.get(role_to_edit, {"groups": [], "dashboards": []})
+
             st.subheader(f"✏️ Edit Role: {role_to_edit}")
+            new_name = st.text_input("Role Name", value=role_to_edit, key="edit_role_name")
 
-            new_name = st.text_input("Role Name", value=role_to_edit)
-
-            # validate defaults (some old groups may not exist anymore)
             valid_defaults = [g for g in role_data.get("groups", []) if g in combined_options]
-
             selected_groups = st.multiselect(
                 "Dashboard Groups",
                 options=combined_options,
-                default=valid_defaults
+                default=valid_defaults,
+                key="edit_role_groups"
             )
 
             selected_dashboards = []
-            if selected_groups and "dashboards" in st.session_state:
+            if selected_groups:
                 st.markdown("**Select Dashboards for this Role:**")
                 for name, details in st.session_state.dashboards.items():
                     if any(group in details["groups"] for group in selected_groups):
                         checked = name in role_data.get("dashboards", [])
-                        if st.checkbox(
-                            f"{details['id']} - {name} ({', '.join(details['groups'])})",
-                            value=checked,
-                            key=f"edit_chk_{name}"
-                        ):
+                        if st.checkbox(f"{details['id']} - {name} ({', '.join(details['groups'])})", value=checked, key=f"edit_chk_{name}"):
                             selected_dashboards.append(name)
 
-            if st.button("💾 Save Changes"):
-                st.session_state.ROLES_MAP.pop(role_to_edit)
-                st.session_state.ROLES_MAP[new_name] = {
-                    "groups": selected_groups,
-                    "dashboards": selected_dashboards
-                }
-                save_roles()
-                st.success(f"Role '{new_name}' updated.")
-                st.session_state.pop("editing_role")
-            if st.button("❌ Cancel"):
-                st.session_state.pop("editing_role")
-                st.rerun()
-    def manage_responsibilities(self):
-        st.header("Manage Responsibilities")
-        # Ensure RESP is a dict
-        if "RESPONSIBILITIES" not in st.session_state:
-          st.session_state.RESPONSIBILITIES = load_responsibilities()
-        if not isinstance(st.session_state.RESPONSIBILITIES, dict):
-          st.session_state.RESPONSIBILITIES = {}
+            if st.button("Update"):
+                if not new_name or not selected_groups:
+                    st.warning("Please enter a role name and select at least one group.")
+                else:
+                    if new_name != role_to_edit:
+                        st.session_state.ROLES_MAP.pop(role_to_edit)
+                    st.session_state.ROLES_MAP[new_name] = {
+                        "groups": selected_groups,
+                        "dashboards": selected_dashboards
+                    }
+                    save_roles()
+                    st.success(f"✅ Role '{new_name}' updated successfully!")
+                    st.session_state.edit_role = None
+                    st.rerun()
 
-        # Input for new responsibility
-        new_resp = st.text_input("Enter New Responsibility")
-        selected_roles = st.multiselect("Roles", list(st.session_state.ROLES_MAP))
-        if st.button("Add Responsibility"):
-            if new_resp and selected_roles:
-                if new_resp not in st.session_state.RESPONSIBILITIES:
+            if st.button("⬅️ Cancel"):
+                st.session_state.edit_role = None
+                st.rerun()
+
+    def manage_responsibilities(self):
+        st.header("📝 Manage Responsibilities")
+
+        # --- Initialize state ---
+        if "RESPONSIBILITIES" not in st.session_state:
+            st.session_state.RESPONSIBILITIES = {}
+        if "add_resp_page" not in st.session_state:
+            st.session_state.add_resp_page = False
+        if "edit_resp" not in st.session_state:
+            st.session_state.edit_resp = None
+        if "ROLES_MAP" not in st.session_state:
+            st.session_state.ROLES_MAP = {}
+
+        # --- MAIN LIST PAGE ---
+        if not st.session_state.add_resp_page and st.session_state.edit_resp is None:
+            if st.button("➕ New Responsibility"):
+                st.session_state.add_resp_page = True
+                st.rerun()
+
+            st.subheader("Responsibilities")
+            if st.session_state.RESPONSIBILITIES:
+                cols = st.columns([3, 5])
+                cols[0].markdown("**Responsibility**")
+                cols[1].markdown("**Roles**")
+                for resp, roles in sorted(st.session_state.RESPONSIBILITIES.items()):
+                    cols = st.columns([3, 5])
+                    with cols[0]:
+                        if st.button(resp, key=f"edit_{resp}"):
+                            st.session_state.edit_resp = resp
+                            st.rerun()
+                    with cols[1]:
+                        st.write(", ".join(roles))
+            else:
+                st.info("No responsibilities yet.")
+
+        # --- ADD RESPONSIBILITY PAGE ---
+        if st.session_state.add_resp_page:
+            st.subheader("🆕 Add New Responsibility")
+            new_resp = st.text_input("Enter New Responsibility", key="new_resp").strip()
+            selected_roles = st.multiselect("Assign to Roles", list(st.session_state.ROLES_MAP), key="new_resp_roles")
+
+            if st.button("Add Responsibility"):
+                if not new_resp or not selected_roles:
+                    st.warning("Please enter a responsibility and select at least one role.")
+                elif new_resp in st.session_state.RESPONSIBILITIES:
+                    st.warning("Responsibility already exists.")
+                else:
                     st.session_state.RESPONSIBILITIES[new_resp] = selected_roles
                     save_responsibilities()
-                    st.success(f"Responsibility '{new_resp}' added for roles: {', '.join(selected_roles)}")
-                else:
-                    st.warning("Responsibility already exists.")
-            else:
-                st.warning("Please enter a responsibility and select at least one role.")
+                    st.success(f"✅ Responsibility '{new_resp}' created successfully!")
+                    st.session_state.add_resp_page = False
+                    st.rerun()
 
-        st.markdown("---")
-        st.subheader("Existing Responsibilities")
-
-        if st.session_state.RESPONSIBILITIES:
-            for resp, roles in sorted(st.session_state.RESPONSIBILITIES.items()):
-                # Make responsibility name a clickable hyperlink
-                # Alternative clickable using st.button but styled as link
-                cols = st.columns([3, 5])
-                if cols[0].button(resp, key=f"edit_{resp}", help="Click to edit", type="secondary"):
-                    st.session_state.edit_resp = resp
-                    st.session_state.edit_roles = roles
-                cols[1].write(", ".join(roles))
-
-            # If editing
-            if "edit_resp" in st.session_state:
-                st.markdown("---")
-                st.subheader(f"Edit Responsibility: {st.session_state.edit_resp}")
-                edited_resp = st.text_input("Responsibility Name", st.session_state.edit_resp)
-                edited_roles = st.multiselect("Roles", list(st.session_state.ROLES_MAP), default=st.session_state.edit_roles)
-                if st.button("Save Changes"):
-                    # Remove old key if renamed
-                    if edited_resp != st.session_state.edit_resp:
-                        st.session_state.RESPONSIBILITIES.pop(st.session_state.edit_resp)
-                    st.session_state.RESPONSIBILITIES[edited_resp] = edited_roles
-                    save_responsibilities()
-                    st.success("Responsibility updated!")
-                    st.session_state.pop("edit_resp")
-                    st.session_state.pop("edit_roles")
-        else:
-            st.info("No responsibilities yet.")
-    def manage_users(self):
-        st.header("User Access")
-
-        # Create User Button
-        if st.button("Add New User"):
-            st.session_state.show_create_user_form = True
-            st.session_state._editing_user = None
-
-        if st.session_state.get("show_create_user_form", False):
-            self.createuser()
-
-        st.subheader("Registered Users")
-
-        if not st.session_state.USERS:
-            st.info("No registered users found.")
-            return
-
-        # Table header
-        cols = st.columns([2, 3, 3])
-        cols[0].write("**Username**")
-        cols[1].write("**Responsibilities**")
-        cols[2].write("**Email**")
-
-        # Display users as "hyperlinks"
-        for username, details in st.session_state.USERS.items():
-            resp_data = details[1]  # responsibilities
-            responsibilities = ", ".join(resp_data) if isinstance(resp_data, list) else resp_data
-            email = details[2]
-
-            cols = st.columns([2, 3, 3])
-
-            # Button styled as hyperlink
-            if cols[0].button(f"➡️ {username}", key=f"user_{username}"):
-                st.session_state._editing_user = username
-                st.session_state.show_create_user_form = True
+            if st.button("⬅️ Cancel"):
+                st.session_state.add_resp_page = False
                 st.rerun()
 
-            cols[1].write(responsibilities)
-            cols[2].write(email)
+        # --- EDIT RESPONSIBILITY PAGE ---
+        if st.session_state.edit_resp is not None:
+            resp_to_edit = st.session_state.edit_resp
+            role_data = st.session_state.RESPONSIBILITIES.get(resp_to_edit, [])
 
-
-
-    def createuser(self):
-        is_edit_mode = st.session_state.get("_editing_user") is not None
-        user_to_edit = st.session_state.get("_editing_user")
-        st.title("Edit User" if is_edit_mode else "Create New User")
-
-        if is_edit_mode:
-            user_data = st.session_state.USERS[user_to_edit]
-            default_email = user_data[2]
-            saved_responsibilities = user_data[1]  # responsibilities
-            inactive_default = user_data[3] if len(user_data) > 3 else False
-            is_admin_default = user_data[4] if len(user_data) > 4 else False
-        else:
-            default_email = ""
-            saved_responsibilities = []
-            inactive_default = False
-            is_admin_default = False
-
-        # Get available responsibilities
-        available_responsibilities = list(st.session_state.setdefault("RESPONSIBILITIES", {}))
-        valid_saved_responsibilities = [r for r in saved_responsibilities if r in available_responsibilities]
-
-        with st.form("create_user_form"):
-            username = st.text_input("Username", value=user_to_edit if is_edit_mode else "")
-            email = st.text_input("Email", value=default_email)
-            password = st.text_input("Password (leave blank to keep same)", type="password")
-
-            # ✅ Preserve checkbox values
-            inactive = st.checkbox("Inactive User", value=inactive_default)
-            is_admin = st.checkbox("Admin User", value=is_admin_default)
-
-            # Responsibilities instead of roles
-            responsibilities = st.multiselect(
-                "Select Responsibilities",
-                available_responsibilities,
-                default=valid_saved_responsibilities,
-                key="add_user_responsibilities"
+            st.subheader(f"✏️ Edit Responsibility: {resp_to_edit}")
+            new_name = st.text_input("Responsibility Name", value=resp_to_edit, key="edit_resp_name")
+            selected_roles = st.multiselect(
+                "Assign to Roles",
+                options=list(st.session_state.ROLES_MAP),
+                default=[r for r in role_data if r in st.session_state.ROLES_MAP],
+                key="edit_resp_roles"
             )
 
-            submitted = st.form_submit_button("Update User" if is_edit_mode else "Create User")
+            if st.button("Update"):
+                if not new_name or not selected_roles:
+                    st.warning("Please enter a name and select at least one role.")
+                else:
+                    if new_name != resp_to_edit:
+                        st.session_state.RESPONSIBILITIES.pop(resp_to_edit)
+                    st.session_state.RESPONSIBILITIES[new_name] = selected_roles
+                    save_responsibilities()
+                    st.success(f"✅ Responsibility '{new_name}' updated successfully!")
+                    st.session_state.edit_resp = None
+                    st.rerun()
+
+            if st.button("⬅️ Cancel"):
+                st.session_state.edit_resp = None
+                st.rerun()
+
+    def manage_users(self):
+        st.header("👥 Manage Users")
+
+        # --- Initialize session state ---
+        if "USERS" not in st.session_state:
+            st.session_state.USERS = {}
+        if "add_user_page" not in st.session_state:
+            st.session_state.add_user_page = False
+        if "edit_user" not in st.session_state:
+            st.session_state.edit_user = None
+
+        # --- Main list page ---
+        if not st.session_state.add_user_page and st.session_state.edit_user is None:
+            if st.button("➕ Add New User"):
+                st.session_state.add_user_page = True
+                st.rerun()
+
+            st.subheader("📋 Registered Users")
+            if st.session_state.USERS:
+                cols = st.columns([2, 3, 3, 2, 2])
+                cols[0].markdown("**Username**")
+                cols[1].markdown("**Responsibilities**")
+                cols[2].markdown("**Email**")
+                cols[3].markdown("**Inactive**")
+                cols[4].markdown("**Admin**")
+
+                for username, details in sorted(st.session_state.USERS.items()):
+                    roles = details.get("roles", [])
+                    email = details.get("email", "")
+                    inactive = details.get("inactive", False)
+                    is_admin = details.get("is_admin", False)
+
+                    cols = st.columns([2, 3, 3, 2, 2])
+                    with cols[0]:
+                        if st.button(f"➡️ {username}", key=f"user_{username}"):
+                            st.session_state.edit_user = username
+                            st.rerun()
+                    cols[1].write(", ".join(roles))
+                    cols[2].write(email)
+                    cols[3].write("YES" if inactive else "NO")
+                    cols[4].write("YES" if is_admin else "NO")
+            else:
+                st.info("No registered users yet.")
+
+        # --- Add User Page ---
+        if st.session_state.add_user_page:
+            st.subheader("🆕 Add New User")
+            self.createuser(is_edit=False)
+            if st.button("⬅️ Cancel"):
+                st.session_state.add_user_page = False
+                st.rerun()
+
+        # --- Edit User Page ---
+        if st.session_state.edit_user is not None:
+            username = st.session_state.edit_user
+            st.subheader(f"✏️ Edit User: {username}")
+            self.createuser(is_edit=True, username=username)
+            if st.button("⬅️ Cancel"):
+                st.session_state.edit_user = None
+                st.rerun()
+
+
+    def createuser(self, is_edit=False, username=None):
+        # --- Prepare defaults ---
+        if is_edit and username:
+            user_data = st.session_state.USERS[username]
+            default_email = user_data.get("email", "")
+            saved_roles = user_data.get("roles", [])
+            inactive_status = user_data.get("inactive", False)
+            is_admin_default = user_data.get("is_admin", False)
+        else:
+            username = ""
+            default_email = ""
+            saved_roles = []
+            inactive_status = False
+            is_admin_default = False
+
+        available_roles = list(st.session_state.get("RESPONSIBILITIES", {}).keys())
+        valid_saved_roles = [r for r in saved_roles if r in available_roles]
+
+        with st.form("create_user_form"):
+            username_input = st.text_input("Username", value=username, disabled=is_edit)
+            email_input = st.text_input("Email", value=default_email)
+            password_input = st.text_input("Password (leave blank to keep same)", type="password")
+
+            inactive_checkbox = st.checkbox("Inactive User", value=inactive_status)
+            is_admin_checkbox = st.checkbox("Admin User", value=is_admin_default)
+
+            roles_input = st.multiselect(
+                "Select Responsibilities",
+                options=available_roles,
+                default=valid_saved_roles
+            )
+
+            submitted = st.form_submit_button("Update User" if is_edit else "Create User")
 
         if submitted:
-            if not username or not email:
+            if not username_input or not email_input:
                 st.error("Please fill all required fields")
                 return
 
-            if is_edit_mode:
-                if username != user_to_edit and username in st.session_state.USERS:
-                    st.warning("New username already exists")
-                    return
-                hashed_pw = hash_password(password) if password else st.session_state.USERS[user_to_edit][0]
-                if username != user_to_edit:
-                    del st.session_state.USERS[user_to_edit]
-
-                # ✅ Save with inactive & admin flags
-                st.session_state.USERS[username] = [hashed_pw, responsibilities, email, inactive, is_admin]
-                st.success("User updated successfully")
-
+            if is_edit:
+                # Update existing user
+                if password_input:
+                    hashed_pw = hash_password(password_input)
+                    st.session_state.USERS[username]["password"] = hashed_pw
+                st.session_state.USERS[username]["email"] = email_input
+                st.session_state.USERS[username]["roles"] = roles_input
+                st.session_state.USERS[username]["inactive"] = inactive_checkbox
+                st.session_state.USERS[username]["is_admin"] = is_admin_checkbox
+                st.success("✅ User updated successfully")
+                st.session_state.edit_user = None
             else:
-                if username in st.session_state.USERS:
+                # Create new user
+                if username_input in st.session_state.USERS:
                     st.warning("Username already exists")
-                else:
-                    hashed_pw = hash_password(password)
-                    st.session_state.USERS[username] = [hashed_pw, responsibilities, email, inactive, is_admin]
-                    st.success("User created successfully")
+                    return
+                hashed_pw = hash_password(password_input)
+                st.session_state.USERS[username_input] = {
+                    "password": hashed_pw,
+                    "roles": roles_input,
+                    "email": email_input,
+                    "inactive": inactive_checkbox,
+                    "is_admin": is_admin_checkbox,
+                    "last_activity": {"status": False, "date": None}
+                }
+                st.success("✅ User created successfully")
+                st.session_state.add_user_page = False
 
             save_users(st.session_state.USERS)
-            st.session_state.show_create_user_form = False
-            st.session_state._editing_user = None
             st.rerun()
 
-
+    def logout(self):
+        st.session_state.logged_in = False
+        st.session_state.username = ""
+        st.session_state.role = ""
+        st.session_state.page = "login"
+        st.rerun()
 
     def user_dashboard(self):
         st.title("User Dashboard")
@@ -965,12 +1080,6 @@ class InfowayApp():
         df_budget = pd.DataFrame(budget_data)
         st.dataframe(df_budget)
         st.bar_chart(df_budget.set_index("Department"))
-    def purchase_dashboard(self):
-        st.title("Dashboards of Purchase module")
-        self.purchase()
-        self.GRN()
-        self.lpo_grn_gross_amount()
-        self.lpo_grn_net_values()
     def load_purchase_data(self,file_path="data/lpo_data.csv"):
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Purchase file not found: {file_path}")
@@ -1001,7 +1110,7 @@ class InfowayApp():
 
         return df
 
-    def purchase(self):
+    def lpo_data(self):
         st.title("📊 Purchase Dashboard")
 
         df = self.load_purchase_data()
@@ -1013,18 +1122,29 @@ class InfowayApp():
         projects = st.multiselect(
             "Select Projects",
             options=sorted(df["Project"].unique()),
-            default=[]
+            default=[],
+            placeholder="Choose project(s)..."
         )
 
         view_mode = st.radio(
             "View Mode",
             options=["Yearly", "Monthly"],
             index=0,
-            horizontal=True,key="radio"
+            horizontal=True,
+            key="radio"
         )
+
+        # Only move forward if projects are selected
+        if not projects:
+            st.info("👆 Please select at least one project to view data.")
+            return
 
         # Apply project filter
         df_filtered = df[df["Project"].isin(projects)]
+
+        if df_filtered.empty:
+            st.warning("No data available for the selected project(s).")
+            return
 
         if view_mode == "Yearly":
             df_grouped = df_filtered.groupby("Year", as_index=False)["Amount"].sum()
@@ -1036,8 +1156,18 @@ class InfowayApp():
             st.pyplot(fig)
 
         elif view_mode == "Monthly":
-            # Let user choose year for monthly view
-            selected_year = st.selectbox("Select Year", sorted(df_filtered["Year"].unique()))
+            # Don’t auto-show until a year is picked
+            selected_year = st.selectbox(
+                "Select Year", 
+                sorted(df_filtered["Year"].unique()),
+                index=None,
+                placeholder="Choose a year..."
+            )
+
+            if not selected_year:
+                st.info("👆 Please select a year to see monthly details.")
+                return
+
             df_year = df_filtered[df_filtered["Year"] == selected_year]
             df_grouped = df_year.groupby("Month", as_index=False)["Amount"].sum()
             fig, ax = plt.subplots()
@@ -1046,6 +1176,7 @@ class InfowayApp():
             ax.set_xlabel("Month")
             ax.set_ylabel("Amount")
             st.pyplot(fig)
+
     def GRN(self):
         st.subheader("GOOD RECIEVE NOTE DATA")
         if not os.path.exists("data/grn_data.csv"):
@@ -1166,39 +1297,59 @@ class InfowayApp():
         st.pyplot(fig)
 
     def lpo_grn_net_values(self):
-        data = pd.read_csv("data/lpo_grn_net_value.csv")
-        data.columns = data.columns.str.strip()
+            data = pd.read_csv("data/lpo_grn_net_value.csv")
+            data.columns = data.columns.str.strip()
 
-        # Add Net_Cost column before filtering
-        data['Net_Cost'] = data['PO_Net Value'] + data['GRN_Net Value']
+            # Add Net_Cost column
+            data['Net_Cost'] = data['PO_Net Value'] + data['GRN_Net Value']
 
-        projects = data['Project'].unique().tolist()
-        selected_projects = st.multiselect("Select Projects (max 15)", projects, default=[],key="lpo_grn_projects")
+            projects = sorted(data['Project'].unique().tolist())
+            selected_projects = st.multiselect(
+        "Select Projects (max 15)", 
+        projects, 
+        default=[], 
+        key="lpo_grn_projects"    # 👈 unique key
+    )
+            if len(selected_projects) > 15:
+                st.warning("⚠️ Please select 15 or fewer projects.")
+                return
 
-        if len(selected_projects) > 15:
-            st.warning("Please select 15 or fewer projects.")
-            st.stop()
+            if not selected_projects:
+                st.info("👆 Please select at least one project to view data.")
+                return
 
-        if not selected_projects:
-            st.info("Please select at least one project.")
-            st.stop()
+            # Filter data
+            filtered_df = data[data['Project'].isin(selected_projects)]
 
-        filtered_df = data[data['Project'].isin(selected_projects)].reset_index(drop=True)
+            # Aggregate net cost
+            net_cost_by_project = filtered_df.groupby('Project')['Net_Cost'].sum()
 
-        net_cost_by_project = filtered_df.groupby('Project')['Net_Cost'].sum()
+            # If only 1 project, pie makes no sense → use bar
+            if len(net_cost_by_project) == 1:
+                fig, ax = plt.subplots(figsize=(6, 4))
+                ax.bar(net_cost_by_project.index, net_cost_by_project.values)
+                ax.set_title("Net Cost (OMR) by Project")
+                ax.set_ylabel("Net Cost")
+                st.pyplot(fig)
+                return
 
-        fig, ax = plt.subplots(figsize=(8, 8))
-        ax.pie(net_cost_by_project, labels=net_cost_by_project.index, autopct='%1.1f%%')
-        ax.set_title('Net Cost (OMR) by Project')
+            # Pie chart
+            fig, ax = plt.subplots(figsize=(8, 8))
+            wedges, texts, autotexts = ax.pie(
+                net_cost_by_project, 
+                labels=net_cost_by_project.index, 
+                autopct='%1.1f%%', 
+                startangle=90
+            )
 
-        st.pyplot(fig)
-    def seaborn(self):
-        data=pd.read_csv('data/sales_data.csv')
-        dt=pd.DataFrame(data)
-        sns.barplot(x="City", y="Total", data=data, palette="viridis")
-        plt.title("Total Sales by City")
-        plt.show()
+            # Improve text size & readability
+            for t in texts:
+                t.set_size(10)
+            for t in autotexts:
+                t.set_size(9)
 
+            ax.set_title("Net Cost (OMR) by Project", fontsize=14)
+            st.pyplot(fig)
 
 if __name__ == "__main__":
     app = InfowayApp()
