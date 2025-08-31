@@ -1,0 +1,24 @@
+
+            .stApp { background: #e3f2fd; }
+            .login-logo {
+                width: 120px; height: 120px; border-radius: 50%;
+                object-fit: contain; border: 3px solid #cccccc;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                margin-bottom: 25px; transition: transform 0.3s ease;
+            }
+            .login-logo:hover { transform: scale(1.05); }
+            .login-title {
+                color: #2a2a2a; font-size: 26px; font-weight: bold;
+                margin-bottom: 25px;
+            }
+            label { color: #333333 !important; font-weight: bold; font-size: 14px; }
+            div.stButton > button {
+                width: 100%; background: #42a5f5; color: white;
+                height: 45px; font-size: 16px; border-radius: 10px;
+                border: none; box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+                transition: all 0.3s ease-in-out;
+            }
+            div.stButton > button:hover {
+                background: #1e88e5; transform: translateY(-2px);
+                box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+            }
