@@ -1,38 +1,11 @@
 import streamlit as st
-import os
-import matplotlib.pyplot as plt
-import pandas as pd
-from PIL import Image
-import pickle
-import hashlib
-import PyPDF2
-import numpy as np
-import base64
-import seaborn as sns 
-import random 
-import smtplib
-from email.mime.text import MIMEText
-from datetime import datetime
-from utils.login import LoginPage
-from utils.functions import (
-    load_users, save_users,
-    load_responsibilities, save_responsibilities,
-    load_roles, save_roles,
-    load_dashboard_groups, save_dashboard_groups,
-    load_dashboards, save_dashboards,
-    hash_password, load_main_css
-)
-from utils.dashboard import (
-load_purchase_data,
-lpo_data,
-GRN,
-    show_sales_chart,show_budgeting_section,lpo_grn_net_values,lpo_grn_gross_amount
-)
-
-
-
-
-# -------------------------- Main App Class --------------------------
+from src.utils.login import LoginPage,hash_password
+from src.utils.css import load_main_css
+from src.utils.user_utils import load_users, save_users
+from src.utils.role_utils import load_roles, save_roles
+from src.utils.responsibility_utils import load_responsibilities, save_responsibilities
+from src.utils.dashboard_utils import load_dashboard_groups, save_dashboard_groups,load_dashboards, save_dashboards
+import src.utils.dashboard as dashboards # -------------------------- Main App Class --------------------------
 class InfowayApp():
     def __init__(self):
         if 'logged_in' not in st.session_state:
@@ -47,18 +20,18 @@ class InfowayApp():
             st.session_state.role = ""
         if 'show_create_user_form' not in st.session_state:
             st.session_state.show_create_user_form = False
-        if 'USERS' not in st.session_state:
-            st.session_state.USERS = load_users()
-        if 'RESPONSIBILITIES' not in st.session_state:
-            st.session_state.RESPONSIBILITIES = load_responsibilities()
-        if 'ROLES_MAP' not in st.session_state:
+        if 'users' not in st.session_state:
+            st.session_state.users = load_users()
+        if 'responsibilities' not in st.session_state:
+            st.session_state.responsibilities = load_responsibilities()
+        if 'roles_map' not in st.session_state:
             st.session_state.ROLES_MAP = load_roles()
-        if 'Dashboard_groups' not in st.session_state:
-            st.session_state.Dashboard_groups=load_dashboard_groups()
+        if 'dashboard_groups' not in st.session_state:
+            st.session_state.dashboard_groups=load_dashboard_groups()
         if 'dashboards' not in st.session_state:
             st.session_state.dashboards=load_dashboards()
     def run(self):
-        if not st.session_state.USERS:
+        if not st.session_state.users:
             return
         if st.session_state.logged_in:
             role = st.session_state.role.strip().lower()
@@ -86,7 +59,7 @@ class InfowayApp():
         )
         st.set_page_config(layout="wide")
         load_main_css("css/main.css")
-        st.header("Admin Panel")
+        st.header("Admin Portal")
         st.sidebar.markdown("---")
 
         if "active_module" not in st.session_state:
@@ -108,9 +81,9 @@ class InfowayApp():
                      "📈 View Budgeting"
                  })
             with sales_tabs[0]:
-                show_sales_chart()
+                dashboards.show_sales_chart()
             with sales_tabs[1]:
-                show_budgeting_section()
+                dashboards.show_budgeting_section()
         if st.sidebar.button("🚪 Logout"):
             self.logout() 
             st.success("Logout Successfully")
@@ -131,22 +104,22 @@ class InfowayApp():
                 # Tab 1: LPO DATA only
                 with purchase_tabs[1]:
                     st.subheader("LPO DATA")
-                    lpo_data()
+                    dashboards.lpo_data()
 
                 # Tab 2: GRN DATA only
                 with purchase_tabs[2]:
                     st.subheader("GRN DATA")
-                    GRN()
+                    dashboards.GRN()
 
                 # Tab 3: LPO GRN Gross Amount only
                 with purchase_tabs[3]:
                     st.subheader("LPO GRN Gross Amount")
-                    lpo_grn_gross_amount()
+                    dashboards.lpo_grn_gross_amount()
 
                 # Tab 4: LPO GRN Net Values only
                 with purchase_tabs[4]:
                     st.subheader("LPO GRN Net Values")
-                    lpo_grn_net_values()
+                    dashboards.lpo_grn_net_values()
 
         # ========== ADMIN MODULE ==========
         elif st.session_state.active_module == "admin":
@@ -285,11 +258,12 @@ class InfowayApp():
 
 
 
+
     def dashboard(self):
-        st.subheader("📊 Dashboards")
+        st.subheader("🏠 Manage Dashboards")
 
         # --- Prepare dashboard groups list ---
-        dashboard_groups = st.session_state.get("Dashboard_groups", {})
+        dashboard_groups = st.session_state.get("dashboard_groups", {})
         if isinstance(dashboard_groups, dict):
             dashboard_groups_list = list(dashboard_groups.keys())
         elif isinstance(dashboard_groups, set):
@@ -312,19 +286,19 @@ class InfowayApp():
             st.subheader("Dashboards")
             if st.session_state.dashboards:
                 cols = st.columns([2, 2, 4])
-                cols[0].markdown("**Dashboard ID**")
-                cols[1].markdown("**Dashboard Name**")
+                cols[0].markdown("**Dashboard Name**")
+                cols[1].markdown("**Dashboard ID**")
                 cols[2].markdown("**Groups**")
 
                 for d_name, details in st.session_state.dashboards.items():
                     row_cols = st.columns([2, 2, 4])
                     with row_cols[0]:
-                        st.write(details["id"])
-                    with row_cols[1]:
                         # Use a unique key for each dashboard button
                         if st.button(d_name, key=f"dashboard_btn_{d_name}"):
                             st.session_state.edit_dashboard = d_name
                             st.rerun()
+                    with row_cols[1]:
+                        st.write(details["id"])
                     with row_cols[2]:
                         st.write(", ".join(details["groups"]))
             else:
@@ -399,27 +373,23 @@ class InfowayApp():
 
 
     def manage_roles(self):
-        st.header("👤 Manage Roles")
+        st.header("👥 Manage Roles")
 
         # --- Initialize session state ---
-        if "ROLES_MAP" not in st.session_state:
-            st.session_state.ROLES_MAP = {}
+        if "roles_map" not in st.session_state:
+            st.session_state.roles_map = load_roles()
         if "add_role_page" not in st.session_state:
             st.session_state.add_role_page = False
         if "edit_role" not in st.session_state:
             st.session_state.edit_role = None
-        if "Dashboard_groups" not in st.session_state:
-            st.session_state.Dashboard_groups = set()
+        if "dashboard_groups" not in st.session_state:
+            st.session_state.dashboard_groups = set()
         if "dashboards" not in st.session_state:
             st.session_state.dashboards = {}
 
         # --- Combined options for groups ---
-        try:
-            df = self.load_purchase_data()
-            column_names = list(df.columns)
-        except Exception:
-            column_names = []
-        combined_options = sorted(set(st.session_state.Dashboard_groups).union(column_names))
+        column_names = []
+        combined_options = sorted(set(st.session_state.dashboard_groups).union(column_names))
 
         # --- MAIN LIST PAGE ---
         if not st.session_state.add_role_page and st.session_state.edit_role is None:
@@ -428,12 +398,12 @@ class InfowayApp():
                 st.rerun()
 
             st.subheader("Roles")
-            if st.session_state.ROLES_MAP:
+            if st.session_state.roles_map:
                 cols = st.columns([3, 5])
                 cols[0].markdown("**Role Name**")
                 cols[1].markdown("**Groups**")
 
-                for role, data in sorted(st.session_state.ROLES_MAP.items()):
+                for role, data in sorted(st.session_state.roles_map.items()):
                     row_cols = st.columns([3, 5])
                     with row_cols[0]:
                         if st.button(role, key=f"role_btn_{role}"):
@@ -464,14 +434,14 @@ class InfowayApp():
             if st.button("Add Role", key="add_role_btn"):
                 if not new_role or not selected_groups:
                     st.warning("Please enter a role name and select at least one group.")
-                elif new_role in st.session_state.ROLES_MAP:
+                elif new_role in st.session_state.roles_map:
                     st.warning("Role already exists.")
                 else:
-                    st.session_state.ROLES_MAP[new_role] = {
+                    st.session_state.roles_map[new_role] = {
                         "groups": selected_groups,
                         "dashboards": selected_dashboards
                     }
-                    save_roles(st.session_state.ROLES_MAP)  # ✅ Pass the roles
+                    save_roles(st.session_state.roles_map)  # ✅ Pass the roles
                     st.success(f"✅ Role '{new_role}' created successfully!")
                     st.session_state.add_role_page = False
                     st.rerun()
@@ -514,12 +484,12 @@ class InfowayApp():
                     st.warning("Please enter a role name and select at least one group.")
                 else:
                     if new_name != role_to_edit:
-                        st.session_state.ROLES_MAP.pop(role_to_edit)
-                    st.session_state.ROLES_MAP[new_name] = {
+                        st.session_state.roles_map.pop(role_to_edit)
+                    st.session_state.roles_map[new_name] = {
                         "groups": selected_groups,
                         "dashboards": selected_dashboards
                     }
-                    save_roles(st.session_state.ROLES_MAP)  # ✅ Pass the roles
+                    save_roles(st.session_state.roles_map)  # ✅ Pass the roles
                     st.success(f"✅ Role '{new_name}' updated successfully!")
                     st.session_state.edit_role = None
                     st.rerun()
@@ -530,17 +500,17 @@ class InfowayApp():
 
 
     def manage_responsibilities(self):
-        st.header("📝 Manage Responsibilities")
+        st.header("🧩 Manage Responsibilities")
 
         # --- Initialize state ---
-        if "RESPONSIBILITIES" not in st.session_state:
-            st.session_state.RESPONSIBILITIES = {}
+        if "responsibilities" not in st.session_state:
+            st.session_state.responsibilities = {}
         if "add_resp_page" not in st.session_state:
             st.session_state.add_resp_page = False
         if "edit_resp" not in st.session_state:
             st.session_state.edit_resp = None
-        if "ROLES_MAP" not in st.session_state:
-            st.session_state.ROLES_MAP = {}
+        if "roles_map" not in st.session_state:
+            st.session_state.roles_map = {}
 
         # --- MAIN LIST PAGE ---
         if not st.session_state.add_resp_page and st.session_state.edit_resp is None:
@@ -549,11 +519,11 @@ class InfowayApp():
                 st.rerun()
 
             st.subheader("Responsibilities")
-            if st.session_state.RESPONSIBILITIES:
+            if st.session_state.responsibilities:
                 cols = st.columns([3, 5])
                 cols[0].markdown("**Responsibility**")
                 cols[1].markdown("**Roles**")
-                for resp, roles in sorted(st.session_state.RESPONSIBILITIES.items()):
+                for resp, roles in sorted(st.session_state.responsibilities.items()):
                     cols = st.columns([3, 5])
                     with cols[0]:
                         if st.button(resp, key=f"edit_{resp}"):
@@ -568,16 +538,16 @@ class InfowayApp():
         if st.session_state.add_resp_page:
             st.subheader("🆕 Add New Responsibility")
             new_resp = st.text_input("Enter New Responsibility", key="new_resp").strip()
-            selected_roles = st.multiselect("Assign to Roles", list(st.session_state.ROLES_MAP), key="new_resp_roles")
+            selected_roles = st.multiselect("Assign to Roles", list(st.session_state.roles_map), key="new_resp_roles")
 
             if st.button("Add Responsibility"):
                 if not new_resp or not selected_roles:
                     st.warning("Please enter a responsibility and select at least one role.")
-                elif new_resp in st.session_state.RESPONSIBILITIES:
+                elif new_resp in st.session_state.responsibilities:
                     st.warning("Responsibility already exists.")
                 else:
-                    st.session_state.RESPONSIBILITIES[new_resp] = selected_roles
-                    save_responsibilities(st.session_state.RESPONSIBILITIES)
+                    st.session_state.responsibilities[new_resp] = selected_roles
+                    save_responsibilities(st.session_state.responsibilities)
                     st.success(f"✅ Responsibility '{new_resp}' created successfully!")
                     st.session_state.add_resp_page = False
                     st.rerun()
@@ -589,14 +559,14 @@ class InfowayApp():
         # --- EDIT RESPONSIBILITY PAGE ---
         if st.session_state.edit_resp is not None:
             resp_to_edit = st.session_state.edit_resp
-            role_data = st.session_state.RESPONSIBILITIES.get(resp_to_edit, [])
+            role_data = st.session_state.responsibilities.get(resp_to_edit, [])
 
             st.subheader(f"✏️ Edit Responsibility: {resp_to_edit}")
             new_name = st.text_input("Responsibility Name", value=resp_to_edit, key="edit_resp_name")
             selected_roles = st.multiselect(
                 "Assign to Roles",
-                options=list(st.session_state.ROLES_MAP),
-                default=[r for r in role_data if r in st.session_state.ROLES_MAP],
+                options=list(st.session_state.roles_map),
+                default=[r for r in role_data if r in st.session_state.roles_map],
                 key="edit_resp_roles"
             )
 
@@ -605,9 +575,9 @@ class InfowayApp():
                     st.warning("Please enter a name and select at least one role.")
                 else:
                     if new_name != resp_to_edit:
-                        st.session_state.RESPONSIBILITIES.pop(resp_to_edit)
-                    st.session_state.RESPONSIBILITIES[new_name] = selected_roles
-                    save_responsibilities()
+                        st.session_state.responsibilities.pop(resp_to_edit)
+                    st.session_state.responsibilities[new_name] = selected_roles
+                    save_responsibilities(st.session_state.responsibilities)
                     st.success(f"✅ Responsibility '{new_name}' updated successfully!")
                     st.session_state.edit_resp = None
                     st.rerun()
@@ -617,11 +587,11 @@ class InfowayApp():
                 st.rerun()
 
     def manage_users(self):
-        st.header("👥 Manage Users")
+        st.header("🙋 Manage Users")
 
         # --- Initialize session state ---
-        if "USERS" not in st.session_state:
-            st.session_state.USERS = {}
+        if "users" not in st.session_state:
+            st.session_state.users = {}
         if "add_user_page" not in st.session_state:
             st.session_state.add_user_page = False
         if "edit_user" not in st.session_state:
@@ -629,12 +599,12 @@ class InfowayApp():
 
         # --- Main list page ---
         if not st.session_state.add_user_page and st.session_state.edit_user is None:
-            if st.button("➕ Add New User"):
+            if st.button("➕ New User"):
                 st.session_state.add_user_page = True
                 st.rerun()
 
             st.subheader("📋 Registered Users")
-            if st.session_state.USERS:
+            if st.session_state.users:
                 cols = st.columns([2, 3, 3, 2, 2])
                 cols[0].markdown("**Username**")
                 cols[1].markdown("**Responsibilities**")
@@ -642,7 +612,7 @@ class InfowayApp():
                 cols[3].markdown("**Inactive**")
                 cols[4].markdown("**Admin**")
 
-                for username, details in sorted(st.session_state.USERS.items()):
+                for username, details in sorted(st.session_state.users.items()):
                     roles = details.get("roles", [])
                     email = details.get("email", "")
                     inactive = details.get("inactive", False)
@@ -664,7 +634,7 @@ class InfowayApp():
         if st.session_state.add_user_page:
             st.subheader("🆕 Add New User")
             self.createuser(is_edit=False)
-            if st.button("⬅️ Cancel"):
+            if st.button("⬅️ Cancel",key="add_user"):
                 st.session_state.add_user_page = False
                 st.rerun()
 
@@ -673,7 +643,7 @@ class InfowayApp():
             username = st.session_state.edit_user
             st.subheader(f"✏️ Edit User: {username}")
             self.createuser(is_edit=True, username=username)
-            if st.button("⬅️ Cancel"):
+            if st.button("⬅️ Cancel",key="edit_users"):
                 st.session_state.edit_user = None
                 st.rerun()
 
@@ -681,7 +651,7 @@ class InfowayApp():
     def createuser(self, is_edit=False, username=None):
         # --- Prepare defaults ---
         if is_edit and username:
-            user_data = st.session_state.USERS[username]
+            user_data = st.session_state.users[username]
             default_email = user_data.get("email", "")
             saved_roles = user_data.get("roles", [])
             inactive_status = user_data.get("inactive", False)
@@ -693,10 +663,13 @@ class InfowayApp():
             inactive_status = False
             is_admin_default = False
 
-        available_roles = list(st.session_state.get("RESPONSIBILITIES", {}).keys())
+        available_roles = list(st.session_state.get("responsibilities", {}).keys())
         valid_saved_roles = [r for r in saved_roles if r in available_roles]
 
-        with st.form("create_user_form"):
+        # --- Unique form key ---
+        form_key = f"user_form_{username}" if is_edit else "user_form_new"
+
+        with st.form(key=form_key):
             username_input = st.text_input("Username", value=username, disabled=is_edit)
             email_input = st.text_input("Email", value=default_email)
             password_input = st.text_input("Password (leave blank to keep same)", type="password")
@@ -721,20 +694,24 @@ class InfowayApp():
                 # Update existing user
                 if password_input:
                     hashed_pw = hash_password(password_input)
-                    st.session_state.USERS[username]["password"] = hashed_pw
-                st.session_state.USERS[username]["email"] = email_input
-                st.session_state.USERS[username]["roles"] = roles_input
-                st.session_state.USERS[username]["inactive"] = inactive_checkbox
-                st.session_state.USERS[username]["is_admin"] = is_admin_checkbox
+                    st.session_state.users[username]["password"] = hashed_pw
+                st.session_state.users[username]["email"] = email_input
+                st.session_state.users[username]["roles"] = roles_input
+                st.session_state.users[username]["inactive"] = inactive_checkbox
+                st.session_state.users[username]["is_admin"] = is_admin_checkbox
                 st.success("✅ User updated successfully")
                 st.session_state.edit_user = None
             else:
                 # Create new user
-                if username_input in st.session_state.USERS:
+                if username_input in st.session_state.users:
                     st.warning("Username already exists")
                     return
+                if not password_input:
+                    st.error("Password is required for new users")
+                    return
+
                 hashed_pw = hash_password(password_input)
-                st.session_state.USERS[username_input] = {
+                st.session_state.users[username_input] = {
                     "password": hashed_pw,
                     "roles": roles_input,
                     "email": email_input,
@@ -745,8 +722,10 @@ class InfowayApp():
                 st.success("✅ User created successfully")
                 st.session_state.add_user_page = False
 
-            save_users(st.session_state.USERS)
+            # Save changes
+            save_users(st.session_state.users)
             st.rerun()
+
 
     def logout(self):
         st.session_state.logged_in = False
@@ -767,7 +746,7 @@ class InfowayApp():
             self.createuser()
         
         role = st.session_state.role
-        responsibilities = st.session_state.ROLES_MAP.get(role, [])
+        responsibilities = st.session_state.roles_map.get(role, [])
         if option == "Home":
             st.write(f"Welcome User: {st.session_state.username}")
             if responsibilities:
@@ -776,15 +755,15 @@ class InfowayApp():
                     st.success(f"✅ {resp}")
             if "View Sales Chart" in responsibilities:
                 st.subheader("Sales Dashboard")
-                show_sales_chart()
+                dashboards.show_sales_chart()
             if "Budgeting Access" in responsibilities:
                 st.subheader("Budgeting Section")
-                show_budgeting_section()
+                dashboards.show_budgeting_section()
             if "View Purchase Chart" in responsibilities:
                 st.subheader("Purchase Dashboard")
             if "View Summary" in responsibilities:
                 st.subheader("Purchase Summary")
-                show_budgeting_section()
+                dashboards.show_budgeting_section()
         elif option == "My Profile":
             st.write(f"Username: {st.session_state.username}")
             st.write(f"Role: {st.session_state.role}")
