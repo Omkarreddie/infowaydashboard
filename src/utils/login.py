@@ -15,8 +15,9 @@ def verify_password(stored_password, provided_password):
 
 
 class LoginPage:
+
     def login(self):
-        # ------------------ Load CSS ------------------
+        # ------------------ Load CSS -----------------
         load_login_css("css/loginstyle.css")
 
         # ------------------ Initialize session variables ------------------
@@ -144,5 +145,8 @@ class LoginPage:
         if st.session_state.get("logged_in"):
             if st.sidebar.button("🚪 Logout"):
                 st.session_state.logged_in = False
-                st.session_state.page = "login"
-                st.rerun()
+                st.set_page_config(
+    page_title="Infoway Dashboard",
+    layout="centered",   # NOT "center"
+)
+                st.rerun
