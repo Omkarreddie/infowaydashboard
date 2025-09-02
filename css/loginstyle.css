@@ -72,6 +72,7 @@ div.stButton > button:hover {
     flex: 1; /* equal width buttons */
 }
 
+
 /* Optional: Different style for Forgot Password */
 .forgot-btn > button {
     background: #9e9e9e !important;
