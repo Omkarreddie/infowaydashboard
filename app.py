@@ -1,11 +1,13 @@
 import streamlit as st
 from src.utils.login import LoginPage,hash_password
-from src.utils.css import load_main_css
+from src.utils.css import load_main_css,load_login_css
 from src.utils.user_utils import load_users, save_users
 from src.utils.role_utils import load_roles, save_roles
 from src.utils.responsibility_utils import load_responsibilities, save_responsibilities
 from src.utils.dashboard_utils import load_dashboard_groups, save_dashboard_groups,load_dashboards, save_dashboards
-import src.utils.dashboard as dashboards # -------------------------- Main App Class --------------------------
+import src.utils.dashboard as dashboards 
+# -------------------------- Main App Class --------------------------
+
 class InfowayApp():
     def __init__(self):
         if 'logged_in' not in st.session_state:
@@ -25,11 +27,15 @@ class InfowayApp():
         if 'responsibilities' not in st.session_state:
             st.session_state.responsibilities = load_responsibilities()
         if 'roles_map' not in st.session_state:
-            st.session_state.ROLES_MAP = load_roles()
+            st.session_state.roles_map = load_roles()
         if 'dashboard_groups' not in st.session_state:
             st.session_state.dashboard_groups=load_dashboard_groups()
         if 'dashboards' not in st.session_state:
             st.session_state.dashboards=load_dashboards()
+        if not st.session_state.get("logged_in", False):
+                st.set_page_config(page_title="Infoway Login", layout="centered")
+        else:
+            st.set_page_config(page_title="Infoway Dashboard", layout="wide")
     def run(self):
         if not st.session_state.users:
             return
@@ -46,8 +52,6 @@ class InfowayApp():
                 self.user_dashboard()
             else:
                 st.warning("No dashboard found")
-
-
         else:
             login_page = LoginPage()
             login_page.login()
@@ -57,7 +61,7 @@ class InfowayApp():
             "<marquee behaviour='scroll' direction='left' scrollamount='5' style='color: blue; font-size:20px; font-style: italic;'>Welcome to the Infoway Dashboard!</marquee>",
             unsafe_allow_html=True,
         )
-        st.set_page_config(layout="wide")
+       
         load_main_css("css/main.css")
         st.header("Admin Portal")
         st.sidebar.markdown("---")
@@ -88,6 +92,8 @@ class InfowayApp():
             self.logout() 
             st.success("Logout Successfully")
             st.rerun()
+
+
         # ========== PURCHASE MODULE ==========
         elif st.session_state.active_module == "purchase":
                 purchase_tabs = st.tabs([
@@ -146,8 +152,9 @@ class InfowayApp():
 
             with admin_tabs[4]:
                 self.manage_users()
+
     def dashboardgroups(self):
-        st.subheader("📊 Dashboard Groups")
+        st.subheader("📊 Manage Dashboard Groups")
 
         # ------------------ Initialize session state ------------------
         if "Dashboard_groups" not in st.session_state:
@@ -164,58 +171,38 @@ class InfowayApp():
 
         # ------------------ MAIN LIST PAGE ------------------
         if not st.session_state.add_group_page and st.session_state.edit_group is None:
-            st.write("### Dashboard Groups")
-            if st.session_state.Dashboard_groups:
-                cols = st.columns([2, 4])
-                cols[0].markdown("**Group Name**")
-                cols[1].markdown("**Description**")
 
-                for g, d in st.session_state.Dashboard_groups.items():
-                    row_cols = st.columns([2, 4])
-                    with row_cols[0]:
-                        # Hyperlink-looking button
-                        if st.button(g, key=f"group_{g}"):
-                            st.session_state.edit_group = g
-                            st.rerun()
-                        # CSS for hyperlink style
-                        st.markdown(
-                            f"""
-                            <style>
-                            div.stButton button[key="group_{g}"] {{
-                                background: none;
-                                color: #1E88E5;
-                                border: none;
-                                padding: 0;
-                                text-decoration: underline;
-                                cursor: pointer;
-                                font-size: 16px;
-                            }}
-                            div.stButton button[key="group_{g}"]:hover {{
-                                color: #1565c0;
-                            }}
-                            </style>
-                            """,
-                            unsafe_allow_html=True
-                        )
-
-                    with row_cols[1]:
-                        st.write(d.get("Description", ""))
-
-            else:
-                st.info("No dashboard groups added yet.")
-
-            # --- Button to go to ADD GROUP PAGE ---
-            if st.button("➕ Add New Group", key="go_add_group"):
+            # --- Button to go to ADD GROUP PAGE (top of list) ---
+            if st.button("➕ Add Dashboard Group", key="go_add_group"):
                 st.session_state.add_group_page = True
                 st.rerun()
 
+            if st.session_state.Dashboard_groups:
+                # Header row
+                col1, col2 = st.columns([1, 2])
+                col1.markdown("**GROUPS**")
+                col2.markdown("**DESCRIPTION**")
+                st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
+
+                # Data rows
+                for g, d in st.session_state.Dashboard_groups.items():
+                    col1, col2 = st.columns([1, 2])
+                    if col1.button(g, key=f"group_{g}"):
+                        st.session_state.edit_group = g
+                        st.rerun()
+                    col2.write(d.get("Description", ""))
+                    # Add line under each row
+                    st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
+            else:
+                st.info("No dashboard groups added yet.")
+
         # ------------------ ADD GROUP PAGE ------------------
         if st.session_state.add_group_page:
-            st.subheader("🆕 Add New Dashboard Group")
+            st.subheader("🆕 Add Dashboard Group")
             group_name = st.text_input("Group Name", key="new_grp_name")
             group_desc = st.text_input("Description", key="new_grp_desc")
 
-            if st.button("Add Group", key="add_group_btn"):
+            if st.button("Save", key="add_group_btn"):
                 if not group_name:
                     st.warning("Group name cannot be empty.")
                 elif group_name in st.session_state.Dashboard_groups:
@@ -227,7 +214,7 @@ class InfowayApp():
                     st.session_state.add_group_page = False
                     st.rerun()
 
-            if st.button("⬅️ Cancel", key="cancel_add_group"):
+            if st.button("⬅️ Back", key="cancel_add_group"):
                 st.session_state.add_group_page = False
                 st.rerun()
 
@@ -252,12 +239,9 @@ class InfowayApp():
                     st.session_state.edit_group = None
                     st.rerun()
 
-            if st.button("⬅️ Cancel", key="cancel_edit_group"):
+            if st.button("⬅️ Back", key="cancel_edit_group"):
                 st.session_state.edit_group = None
                 st.rerun()
-
-
-
 
     def dashboard(self):
         st.subheader("🏠 Manage Dashboards")
@@ -279,7 +263,7 @@ class InfowayApp():
 
         # --- MAIN LIST PAGE ---
         if not st.session_state.add_dashboard_page and st.session_state.edit_dashboard is None:
-            if st.button("➕ New Dashboard", key="new_dashboard_btn"):
+            if st.button("➕ Add Dashboard", key="new_dashboard_btn"):
                 st.session_state.add_dashboard_page = True
                 st.rerun()
 
@@ -289,6 +273,7 @@ class InfowayApp():
                 cols[0].markdown("**Dashboard Name**")
                 cols[1].markdown("**Dashboard ID**")
                 cols[2].markdown("**Groups**")
+                st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
 
                 for d_name, details in st.session_state.dashboards.items():
                     row_cols = st.columns([2, 2, 4])
@@ -301,12 +286,13 @@ class InfowayApp():
                         st.write(details["id"])
                     with row_cols[2]:
                         st.write(", ".join(details["groups"]))
+                    st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
             else:
                 st.info("No dashboards added yet.")
 
         # --- ADD DASHBOARD PAGE ---
         if st.session_state.add_dashboard_page:
-            st.subheader("🆕 Add New Dashboard")
+            st.subheader("🆕 Add Dashboard")
             new_name = st.text_input("Dashboard Name", key="new_db_name")
             selected_groups = st.multiselect("Dashboard Group", options=dashboard_groups_list, key="new_db_groups")
 
@@ -333,7 +319,7 @@ class InfowayApp():
                     st.session_state.add_dashboard_page = False
                     st.rerun()
 
-            if st.button("⬅️ Cancel", key="cancel_add_dashboard"):
+            if st.button("⬅️ Back", key="cancel_add_dashboard"):
                 st.session_state.add_dashboard_page = False
                 st.rerun()
 
@@ -367,7 +353,7 @@ class InfowayApp():
                     st.session_state.edit_dashboard = None
                     st.rerun()
 
-            if st.button("⬅️ Cancel", key="cancel_edit_dashboard"):
+            if st.button("⬅️ Back", key="cancel_edit_dashboard"):
                 st.session_state.edit_dashboard = None
                 st.rerun()
 
@@ -393,7 +379,7 @@ class InfowayApp():
 
         # --- MAIN LIST PAGE ---
         if not st.session_state.add_role_page and st.session_state.edit_role is None:
-            if st.button("➕ New Role", key="new_role_btn"):
+            if st.button("➕ Add Role", key="new_role_btn"):
                 st.session_state.add_role_page = True
                 st.rerun()
 
@@ -402,6 +388,7 @@ class InfowayApp():
                 cols = st.columns([3, 5])
                 cols[0].markdown("**Role Name**")
                 cols[1].markdown("**Groups**")
+                st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
 
                 for role, data in sorted(st.session_state.roles_map.items()):
                     row_cols = st.columns([3, 5])
@@ -411,12 +398,13 @@ class InfowayApp():
                             st.rerun()
                     with row_cols[1]:
                         st.write(", ".join(data.get("groups", [])))
+                    st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
             else:
                 st.info("No roles defined yet.")
 
         # --- ADD ROLE PAGE ---
         if st.session_state.add_role_page:
-            st.subheader("🆕 Add New Role")
+            st.subheader("🆕 Add Role")
             new_role = st.text_input("Enter New Role", key="new_role").strip()
             selected_groups = st.multiselect("Dashboard Groups", options=combined_options, key="new_role_groups")
 
@@ -446,14 +434,14 @@ class InfowayApp():
                     st.session_state.add_role_page = False
                     st.rerun()
 
-            if st.button("⬅️ Cancel", key="cancel_add_role"):
+            if st.button("⬅️ Back", key="cancel_add_role"):
                 st.session_state.add_role_page = False
                 st.rerun()
 
         # --- EDIT ROLE PAGE ---
         if st.session_state.edit_role is not None:
             role_to_edit = st.session_state.edit_role
-            role_data = st.session_state.ROLES_MAP.get(role_to_edit, {"groups": [], "dashboards": []})
+            role_data = st.session_state.roles_map.get(role_to_edit, {"groups": [], "dashboards": []})
 
             st.subheader(f"✏️ Edit Role: {role_to_edit}")
             new_name = st.text_input("Role Name", value=role_to_edit, key="edit_role_name")
@@ -494,7 +482,7 @@ class InfowayApp():
                     st.session_state.edit_role = None
                     st.rerun()
 
-            if st.button("⬅️ Cancel", key="cancel_edit_role"):
+            if st.button("⬅️ Back", key="cancel_edit_role"):
                 st.session_state.edit_role = None
                 st.rerun()
 
@@ -514,7 +502,7 @@ class InfowayApp():
 
         # --- MAIN LIST PAGE ---
         if not st.session_state.add_resp_page and st.session_state.edit_resp is None:
-            if st.button("➕ New Responsibility"):
+            if st.button("➕ Add Responsibility"):
                 st.session_state.add_resp_page = True
                 st.rerun()
 
@@ -523,6 +511,7 @@ class InfowayApp():
                 cols = st.columns([3, 5])
                 cols[0].markdown("**Responsibility**")
                 cols[1].markdown("**Roles**")
+                st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
                 for resp, roles in sorted(st.session_state.responsibilities.items()):
                     cols = st.columns([3, 5])
                     with cols[0]:
@@ -531,12 +520,13 @@ class InfowayApp():
                             st.rerun()
                     with cols[1]:
                         st.write(", ".join(roles))
+                    st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
             else:
                 st.info("No responsibilities yet.")
 
         # --- ADD RESPONSIBILITY PAGE ---
         if st.session_state.add_resp_page:
-            st.subheader("🆕 Add New Responsibility")
+            st.subheader("🆕 Add Responsibility")
             new_resp = st.text_input("Enter New Responsibility", key="new_resp").strip()
             selected_roles = st.multiselect("Assign to Roles", list(st.session_state.roles_map), key="new_resp_roles")
 
@@ -552,7 +542,7 @@ class InfowayApp():
                     st.session_state.add_resp_page = False
                     st.rerun()
 
-            if st.button("⬅️ Cancel"):
+            if st.button("⬅️ Back"):
                 st.session_state.add_resp_page = False
                 st.rerun()
 
@@ -582,7 +572,7 @@ class InfowayApp():
                     st.session_state.edit_resp = None
                     st.rerun()
 
-            if st.button("⬅️ Cancel"):
+            if st.button("⬅️ Back"):
                 st.session_state.edit_resp = None
                 st.rerun()
 
@@ -599,7 +589,7 @@ class InfowayApp():
 
         # --- Main list page ---
         if not st.session_state.add_user_page and st.session_state.edit_user is None:
-            if st.button("➕ New User"):
+            if st.button("➕ Add User"):
                 st.session_state.add_user_page = True
                 st.rerun()
 
@@ -611,6 +601,7 @@ class InfowayApp():
                 cols[2].markdown("**Email**")
                 cols[3].markdown("**Inactive**")
                 cols[4].markdown("**Admin**")
+                st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
 
                 for username, details in sorted(st.session_state.users.items()):
                     roles = details.get("roles", [])
@@ -627,14 +618,15 @@ class InfowayApp():
                     cols[2].text(email)
                     cols[3].write("YES" if inactive else "NO")
                     cols[4].write("YES" if is_admin else "NO")
+                    st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
             else:
                 st.info("No registered users yet.")
 
         # --- Add User Page ---
         if st.session_state.add_user_page:
-            st.subheader("🆕 Add New User")
+            st.subheader("🆕 Add User")
             self.createuser(is_edit=False)
-            if st.button("⬅️ Cancel",key="add_user"):
+            if st.button("⬅️ Back",key="add_user"):
                 st.session_state.add_user_page = False
                 st.rerun()
 
@@ -643,7 +635,7 @@ class InfowayApp():
             username = st.session_state.edit_user
             st.subheader(f"✏️ Edit User: {username}")
             self.createuser(is_edit=True, username=username)
-            if st.button("⬅️ Cancel",key="edit_users"):
+            if st.button("⬅️ Back",key="edit_users"):
                 st.session_state.edit_user = None
                 st.rerun()
 
@@ -683,7 +675,7 @@ class InfowayApp():
                 default=valid_saved_roles
             )
 
-            submitted = st.form_submit_button("Update User" if is_edit else "Create User")
+            submitted = st.form_submit_button("Update User" if is_edit else "Save")
 
         if submitted:
             if not username_input or not email_input:
@@ -731,7 +723,7 @@ class InfowayApp():
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.session_state.role = ""
-        st.session_state.page = "login"
+        st.session_state.page="login"  # ✅ cor
         st.rerun()
 
     def user_dashboard(self):
@@ -746,7 +738,7 @@ class InfowayApp():
             self.createuser()
         
         role = st.session_state.role
-        responsibilities = st.session_state.roles_map.get(role, [])
+        responsibilities = st.session_state.responsibilities.get(role, [])
         if option == "Home":
             st.write(f"Welcome User: {st.session_state.username}")
             if responsibilities:
