@@ -1,12 +1,13 @@
 import streamlit as st
 from src.utils.login import LoginPage,hash_password
-from src.utils.css import load_main_css,load_login_css
+import src.utils.css as css
 from src.utils.user_utils import load_users, save_users
 from src.utils.role_utils import load_roles, save_roles
 from src.utils.responsibility_utils import load_responsibilities, save_responsibilities
 from src.utils.dashboard_utils import load_dashboard_groups, save_dashboard_groups,load_dashboards, save_dashboards
 import src.utils.dashboard as dashboards 
 # -------------------------- Main App Class --------------------------
+
 
 class InfowayApp():
     def __init__(self):
@@ -62,7 +63,7 @@ class InfowayApp():
             unsafe_allow_html=True,
         )
        
-        load_main_css("css/main.css")
+        css.load_main_css("css/main.css")
         st.header("Admin Portal")
         st.sidebar.markdown("---")
 
@@ -155,7 +156,7 @@ class InfowayApp():
 
     def dashboardgroups(self):
         st.subheader("📊 Manage Dashboard Groups")
-
+        css.hyper_link("css/hyperlink.css")
         # ------------------ Initialize session state ------------------
         if "Dashboard_groups" not in st.session_state:
             st.session_state.Dashboard_groups = load_dashboard_groups()
@@ -187,7 +188,7 @@ class InfowayApp():
                 # Data rows
                 for g, d in st.session_state.Dashboard_groups.items():
                     col1, col2 = st.columns([1, 2])
-                    if col1.button(g, key=f"group_{g}"):
+                    if col1.button(g, key=f"group_{g}",help="Click to edit"):
                         st.session_state.edit_group = g
                         st.rerun()
                     col2.write(d.get("Description", ""))
@@ -245,7 +246,7 @@ class InfowayApp():
 
     def dashboard(self):
         st.subheader("🏠 Manage Dashboards")
-
+        css.hyper_link("css/hyperlink.css")
         # --- Prepare dashboard groups list ---
         dashboard_groups = st.session_state.get("dashboard_groups", {})
         if isinstance(dashboard_groups, dict):
@@ -279,7 +280,7 @@ class InfowayApp():
                     row_cols = st.columns([2, 2, 4])
                     with row_cols[0]:
                         # Use a unique key for each dashboard button
-                        if st.button(d_name, key=f"dashboard_btn_{d_name}"):
+                        if st.button(d_name, key=f"dashboard_btn_{d_name}",help="Click to edit"):
                             st.session_state.edit_dashboard = d_name
                             st.rerun()
                     with row_cols[1]:
@@ -360,6 +361,7 @@ class InfowayApp():
 
     def manage_roles(self):
         st.header("👥 Manage Roles")
+        css.hyper_link("css/hyperlink.css")
 
         # --- Initialize session state ---
         if "roles_map" not in st.session_state:
@@ -393,7 +395,7 @@ class InfowayApp():
                 for role, data in sorted(st.session_state.roles_map.items()):
                     row_cols = st.columns([3, 5])
                     with row_cols[0]:
-                        if st.button(role, key=f"role_btn_{role}"):
+                        if st.button(role, key=f"role_btn_{role}",help="Click to edit"):
                             st.session_state.edit_role = role
                             st.rerun()
                     with row_cols[1]:
@@ -489,7 +491,7 @@ class InfowayApp():
 
     def manage_responsibilities(self):
         st.header("🧩 Manage Responsibilities")
-
+        css.hyper_link("css/hyperlink.css")
         # --- Initialize state ---
         if "responsibilities" not in st.session_state:
             st.session_state.responsibilities = {}
@@ -515,7 +517,7 @@ class InfowayApp():
                 for resp, roles in sorted(st.session_state.responsibilities.items()):
                     cols = st.columns([3, 5])
                     with cols[0]:
-                        if st.button(resp, key=f"edit_{resp}"):
+                        if st.button(resp, key=f"edit_{resp}",help="Click to edit"):
                             st.session_state.edit_resp = resp
                             st.rerun()
                     with cols[1]:
@@ -578,23 +580,24 @@ class InfowayApp():
 
     def manage_users(self):
         st.header("🙋 Manage Users")
-
-        # --- Initialize session state ---
+        css.hyper_link("css/hyperlink.css")
+        # --- 1. Initialize session state ---
         if "users" not in st.session_state:
             st.session_state.users = {}
         if "add_user_page" not in st.session_state:
             st.session_state.add_user_page = False
         if "edit_user" not in st.session_state:
             st.session_state.edit_user = None
-
-        # --- Main list page ---
+        # --- 3. Main list page ---
         if not st.session_state.add_user_page and st.session_state.edit_user is None:
+            # Add User button
             if st.button("➕ Add User"):
                 st.session_state.add_user_page = True
                 st.rerun()
 
             st.subheader("📋 Registered Users")
             if st.session_state.users:
+                # Header row
                 cols = st.columns([2, 3, 3, 2, 2])
                 cols[0].markdown("**Username**")
                 cols[1].markdown("**Responsibilities**")
@@ -603,6 +606,7 @@ class InfowayApp():
                 cols[4].markdown("**Admin**")
                 st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
 
+                # Data rows
                 for username, details in sorted(st.session_state.users.items()):
                     roles = details.get("roles", [])
                     email = details.get("email", "")
@@ -610,34 +614,44 @@ class InfowayApp():
                     is_admin = details.get("is_admin", False)
 
                     cols = st.columns([2, 3, 3, 2, 2])
+
+                    # --- Username as hyperlink-styled button ---
                     with cols[0]:
-                        if st.button(f"➡️ {username}", key=f"user_{username}"):
+                        # Add a special class "user-link" to the button container
+                        if st.button(username, key=f"user_{username}", help="Click to edit"):
                             st.session_state.edit_user = username
                             st.rerun()
+                        
+
+                    # Other columns
                     cols[1].write(", ".join(roles))
                     cols[2].text(email)
                     cols[3].write("YES" if inactive else "NO")
                     cols[4].write("YES" if is_admin else "NO")
+
+                    # Divider
                     st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
             else:
                 st.info("No registered users yet.")
 
-        # --- Add User Page ---
+        # --- 4. Add User Page ---
         if st.session_state.add_user_page:
             st.subheader("🆕 Add User")
             self.createuser(is_edit=False)
-            if st.button("⬅️ Back",key="add_user"):
+            if st.button("⬅️ Back", key="add_user"):
                 st.session_state.add_user_page = False
                 st.rerun()
 
-        # --- Edit User Page ---
+        # --- 5. Edit User Page ---
         if st.session_state.edit_user is not None:
             username = st.session_state.edit_user
             st.subheader(f"✏️ Edit User: {username}")
             self.createuser(is_edit=True, username=username)
-            if st.button("⬅️ Back",key="edit_users"):
+            if st.button("⬅️ Back", key="edit_users"):
                 st.session_state.edit_user = None
                 st.rerun()
+
+
 
 
     def createuser(self, is_edit=False, username=None):
