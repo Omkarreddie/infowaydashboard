@@ -14,6 +14,8 @@ def load_login_css(css="css/loginstyle.css"):
     except FileNotFoundError:
         st.warning(f"CSS file not found: {css}")
 
+
+
 def load_main_css(css="css/main.css"):
     try:
         with open(css, "r") as f:
@@ -21,3 +23,9 @@ def load_main_css(css="css/main.css"):
     except FileNotFoundError:
         st.warning(f"Css file not found:{css}")
 
+def hyper_link(css="css/hyperlink.css"):
+    try:
+        with open(css,'r') as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except FileNotFoundError:
+        st.warning(f"css file not found:{css}")
