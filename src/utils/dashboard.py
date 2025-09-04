@@ -5,7 +5,11 @@ import streamlit as st
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
+import src.utils.css as css
+
+
 def show_sales_chart():
+        
         st.subheader("Sales Data Charts")
         if not os.path.exists("data/sales_data.csv"):
             st.error("Your file does not exist")
@@ -24,6 +28,7 @@ def show_sales_chart():
         st.pyplot(fig)
 
 def show_budgeting_section():
+        
         st.write("📋 This is the budgeting area.")
         budget_data = {"Department": ["Sales", "Marketing", "HR"], "Budget": [150000, 100000, 80000]}
         df_budget = pd.DataFrame(budget_data)
