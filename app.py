@@ -6,6 +6,8 @@ from src.utils.role_utils import load_roles, save_roles
 from src.utils.responsibility_utils import load_responsibilities, save_responsibilities
 from src.utils.dashboard_utils import load_dashboard_groups, save_dashboard_groups,load_dashboards, save_dashboards
 import src.utils.dashboard as dashboards 
+import io
+import pandas as pd
 # -------------------------- Main App Class --------------------------
 
 
@@ -64,6 +66,7 @@ class InfowayApp():
         )
        
         css.load_main_css("css/main.css")
+        css.hyper_link("css/hyperlink.css")
         st.header("Admin Portal")
         st.sidebar.markdown("---")
 
@@ -71,6 +74,7 @@ class InfowayApp():
             st.session_state.active_module = None
         
         if st.sidebar.button("Sales Module"):
+            
             st.session_state.active_module= "sales"
 
         if st.sidebar.button("📦 Purchase Module"):
@@ -188,11 +192,18 @@ class InfowayApp():
                 # Data rows
                 for g, d in st.session_state.Dashboard_groups.items():
                     col1, col2 = st.columns([1, 2])
-                    if col1.button(g, key=f"group_{g}",help="Click to edit"):
-                        st.session_state.edit_group = g
-                        st.rerun()
+                    with col1:
+                        # Wrap the button in a div with the custom class
+                        st.markdown(
+                            f"<div class='hyperlink-button-container'>",
+                            unsafe_allow_html=True
+                        )
+                        if st.button(g, key=f"group_{g}", help="Click to edit"):
+                            st.session_state.edit_group = g
+                            st.rerun()
+                        st.markdown("</div>", unsafe_allow_html=True)
+                    
                     col2.write(d.get("Description", ""))
-                    # Add line under each row
                     st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
             else:
                 st.info("No dashboard groups added yet.")
@@ -578,9 +589,11 @@ class InfowayApp():
                 st.session_state.edit_resp = None
                 st.rerun()
 
+
     def manage_users(self):
         st.header("🙋 Manage Users")
         css.hyper_link("css/hyperlink.css")
+
         # --- 1. Initialize session state ---
         if "users" not in st.session_state:
             st.session_state.users = {}
@@ -588,12 +601,36 @@ class InfowayApp():
             st.session_state.add_user_page = False
         if "edit_user" not in st.session_state:
             st.session_state.edit_user = None
-        # --- 3. Main list page ---
+
+        # --- 2. Main list page ---
         if not st.session_state.add_user_page and st.session_state.edit_user is None:
             # Add User button
-            if st.button("➕ Add User"):
-                st.session_state.add_user_page = True
-                st.rerun()
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                if st.button("➕ Add User"):
+                    st.session_state.add_user_page = True
+                    st.rerun()
+
+            # Download button (only if users exist)
+            if st.session_state.users:
+                with col2:
+                    # Convert users dict -> DataFrame
+                    users_df = pd.DataFrame.from_dict(st.session_state.users, orient="index")
+                    users_df.reset_index(inplace=True)
+                    users_df.rename(columns={"index": "Username"}, inplace=True)
+
+                    # Create CSV in memory
+                    csv_buffer = io.StringIO()
+                    users_df.to_csv(csv_buffer, index=False)
+                    csv_bytes = csv_buffer.getvalue().encode("utf-8")
+
+                    st.download_button(
+                        label="⬇️",
+                        data=csv_bytes,
+                        file_name="registered_users.csv",
+                        mime="text/csv",
+                        help="Download all registered users"
+                    )
 
             st.subheader("📋 Registered Users")
             if st.session_state.users:
@@ -617,11 +654,9 @@ class InfowayApp():
 
                     # --- Username as hyperlink-styled button ---
                     with cols[0]:
-                        # Add a special class "user-link" to the button container
                         if st.button(username, key=f"user_{username}", help="Click to edit"):
                             st.session_state.edit_user = username
                             st.rerun()
-                        
 
                     # Other columns
                     cols[1].write(", ".join(roles))
@@ -629,7 +664,6 @@ class InfowayApp():
                     cols[3].write("YES" if inactive else "NO")
                     cols[4].write("YES" if is_admin else "NO")
 
-                    # Divider
                     st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
             else:
                 st.info("No registered users yet.")

@@ -1,0 +1,15 @@
+
+/* This targets all buttons in the app. */
+.stButton button {
+    background-color: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    color: #0645AD !important ; /* Hyperlink blue */
+    cursor: pointer;
+    font-size: 16px;
+    font-family: inherit;
+}
+.stButton button:hover {
+    color: #0B0080 !important; /* Darker blue on hover */
+}
