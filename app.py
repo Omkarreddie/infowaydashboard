@@ -220,7 +220,7 @@ class InfowayApp():
                 elif group_name in st.session_state.Dashboard_groups:
                     st.warning("Duplicate group name.")
                 else:
-                    st.session_state.Dashboard_groups[group_name] = {"Description": group_desc}
+                    st.session_state.dashboard_groups[group_name] = {"Description": group_desc}
                     save_dashboard_groups(st.session_state.Dashboard_groups)
                     st.success(f"✅ Group '{group_name}' added successfully!")
                     st.session_state.add_group_page = False
@@ -229,6 +229,24 @@ class InfowayApp():
             if st.button("⬅️ Back", key="cancel_add_group"):
                 st.session_state.add_group_page = False
                 st.rerun()
+        if st.session_state.dashboard_groups:
+            data=[]
+            for g,d in st.session_state.dashboard_groups.items():
+                data.append({"Dashboard Group":g,
+                            "Description":d.get("Description", "")})
+            df=pd.DataFrame(data)
+            csv_buffer = io.StringIO()
+            df.to_csv(csv_buffer, index=False)
+            csv_bytes = csv_buffer.getvalue().encode("utf-8")
+            st.download_button(
+                            label="⬇️",
+                            data=csv_bytes,
+                            file_name="dashboard_groups.csv",
+                            mime="text/csv",
+                            help="Download all responsibilities"
+                        )
+
+
 
         # ------------------ EDIT GROUP PAGE ------------------
         if st.session_state.edit_group is not None:
@@ -301,6 +319,29 @@ class InfowayApp():
                     st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
             else:
                 st.info("No dashboards added yet.")
+            if st.session_state.dashboards:
+                        data = []
+                        for role, details in st.session_state.dashboards.items():
+                                             data.append({
+                                            "Dashboard Name": role,
+                                            "Dashboard ID": details.get("id", ""),
+                                            "Groups": ", ".join(details.get("groups", []))
+        })
+
+                        users_df = pd.DataFrame(data)
+
+                        # Create CSV in memory
+                        csv_buffer = io.StringIO()
+                        users_df.to_csv(csv_buffer, index=False)
+                        csv_bytes = csv_buffer.getvalue().encode("utf-8")
+
+                        st.download_button(
+                            label="⬇️",
+                            data=csv_bytes,
+                            file_name="dashboards.csv",
+                            mime="text/csv",
+                            help="Download all responsibilities"
+                        )
 
         # --- ADD DASHBOARD PAGE ---
         if st.session_state.add_dashboard_page:
@@ -451,6 +492,32 @@ class InfowayApp():
                 st.session_state.add_role_page = False
                 st.rerun()
 
+            if st.session_state.roles_map:
+                    data = []
+                    for role, details in st.session_state.roles_map.items():
+                                        data.append({
+                                            "Role": role,
+                                            "Groups": ", ".join(details.get("groups", [])),
+                                            "Dashboards": ", ".join(details.get("dashboards", []))
+                                        })
+
+
+                    users_df = pd.DataFrame(data)
+
+                    # Create CSV in memory
+                    csv_buffer = io.StringIO()
+                    users_df.to_csv(csv_buffer, index=False)
+                    csv_bytes = csv_buffer.getvalue().encode("utf-8")
+
+                    st.download_button(
+                        label="⬇️",
+                        data=csv_bytes,
+                        file_name="roles.csv",
+                        mime="text/csv",
+                        help="Download all responsibilities"
+                    )
+
+
         # --- EDIT ROLE PAGE ---
         if st.session_state.edit_role is not None:
             role_to_edit = st.session_state.edit_role
@@ -536,6 +603,25 @@ class InfowayApp():
                     st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
             else:
                 st.info("No responsibilities yet.")
+        if st.session_state.responsibilities:
+                data = []
+                for resp, roles in st.session_state.responsibilities.items():
+                    data.append({"Responsibilities": resp, "Roles": ", ".join(roles)})
+
+                users_df = pd.DataFrame(data)
+
+                # Create CSV in memory
+                csv_buffer = io.StringIO()
+                users_df.to_csv(csv_buffer, index=False)
+                csv_bytes = csv_buffer.getvalue().encode("utf-8")
+
+                st.download_button(
+                    label="⬇️",
+                    data=csv_bytes,
+                    file_name="responsibilities.csv",
+                    mime="text/csv",
+                    help="Download all responsibilities"
+                )
 
         # --- ADD RESPONSIBILITY PAGE ---
         if st.session_state.add_resp_page:
@@ -558,6 +644,8 @@ class InfowayApp():
             if st.button("⬅️ Back"):
                 st.session_state.add_resp_page = False
                 st.rerun()
+
+            
 
         # --- EDIT RESPONSIBILITY PAGE ---
         if st.session_state.edit_resp is not None:
