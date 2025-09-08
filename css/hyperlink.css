@@ -1,15 +1,30 @@
 
 /* This targets all buttons in the app. */
+/* Make Streamlit buttons look like hyperlinks */
 .stButton button {
     background-color: transparent !important;
     border: none !important;
     padding: 0 !important;
     margin: 0 !important;
-    color: #0645AD !important ; /* Hyperlink blue */
+    color: #0645AD !important; /* Hyperlink blue */
     cursor: pointer;
     font-size: 16px;
     font-family: inherit;
 }
+
 .stButton button:hover {
     color: #0B0080 !important; /* Darker blue on hover */
+}
+
+/* Reduce gap between columns */
+div[data-testid="stHorizontalBlock"] {
+    gap: 0rem !important;       /* remove the default gap */
+    row-gap: 0rem !important;   /* in case Streamlit uses row-gap */
+    column-gap: 0rem !important;
+}
+
+/* Remove padding/margin inside each column */
+div[data-testid="stVerticalBlock"] {
+    padding: 0 !important;
+    margin: 0 !important;
 }
