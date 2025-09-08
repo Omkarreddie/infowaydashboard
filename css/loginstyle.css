@@ -1,5 +1,5 @@
 .stApp {
-    background: #e3f2fd;
+    background: #e3fde9;
 }
 
 /* Container to centrally align its children */
@@ -44,7 +44,7 @@ label {
 /* Button styling */
 div.stButton > button {
     width: 100%;
-    background: #42a5f5;
+    background: #011702;
     color: white;
     height: 45px;
     font-size: 16px;
@@ -53,9 +53,11 @@ div.stButton > button {
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
     transition: all 0.3s ease-in-out;
 }
+ /*  background: #42a5f5;*/
+
 
 div.stButton > button:hover {
-    background: #1e88e5;
+    background: #021a00;
     transform: translateY(-2px);
     box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
 }

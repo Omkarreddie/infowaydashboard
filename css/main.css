@@ -1,4 +1,6 @@
-
+    #MainMenu {visibility: hidden;}   /* hides top-right menu */
+    footer {visibility: hidden;}     /* hides footer */
+    header {visibility: hidden;}  
         section[data-testid="stSidebar"] button,
         div.stButton > button {
             width: 190px;
@@ -15,7 +17,7 @@
 
         section[data-testid="stSidebar"] button:hover,
         div.stButton > button:hover {
-            background: linear-gradient(135deg, #70B7FF, #5A9DFF); /* Slightly darker on hover */
+            background: linear-gradient(135deg, #70ff9d, #5A9DFF); /* Slightly darker on hover */
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
         }
@@ -43,11 +45,14 @@
             font-weight: bold;
             border: none;
         }
-
+        .stHeader{
+            padding-top: 0 rem;
+        }
+        
         /* ================= Main content padding ================= */
         div.block-container {
-            padding-top: 2rem !important;
-            padding-bottom: 1rem !important;
+            padding-top: 0;
+            padding-bottom: 0;
             padding-left: 1rem !important;
             padding-right: 1rem !important;
         }
@@ -59,5 +64,18 @@
             width: 400px;
             margin-bottom: 10px;/* spacing between widgets */
         }
-
+        div.stMarkdown {
+        margin: 0;
+        padding: 0;
+    }
+        /* Style for thin horizontal line */
+        hr.custom-hr {
+        margin: 0 !important;        /* removes extra space above/below */
+        padding: 0 !important;       /* removes internal padding */
+        height: 1px !important;      /* visible but thin */
+        border: none !important;     /* no default border */
+        background-color: #ccc !important;  /* gray line */
+    }
         
+
+
