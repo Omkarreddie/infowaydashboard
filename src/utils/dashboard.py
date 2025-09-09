@@ -1,11 +1,9 @@
 import numpy as np
-import base64
 import seaborn as sns 
 import streamlit as st
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
-import src.utils.css as css
 
 
 def show_sales_chart():

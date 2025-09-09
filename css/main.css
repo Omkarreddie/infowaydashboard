@@ -1,81 +1,95 @@
-    #MainMenu {visibility: hidden;}   /* hides top-right menu */
-    footer {visibility: hidden;}     /* hides footer */
-    header {visibility: hidden;}  
-        section[data-testid="stSidebar"] button,
-        div.stButton > button {
-            width: 190px;
-            height: 45px;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 16px;
-            color: white;
-            border: none;
-            background: linear-gradient(135deg, #a4d8f1, #70B7FF); /* Soft pastel blue */
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* soft shadow */
-            transition: all 0.3s ease-in-out;
-        }
 
-        section[data-testid="stSidebar"] button:hover,
-        div.stButton > button:hover {
-            background: linear-gradient(135deg, #70ff9d, #5A9DFF); /* Slightly darker on hover */
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-        }
+/* ================= Sidebar Buttons ================= */
+section[data-testid="stSidebar"] button,
+div.stButton > button {
+    width: 190px;
+    height: 45px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 16px;
+    color: white !important;
+    border: none;
+    background: linear-gradient(135deg, #035b30, #035b30);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease-in-out;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
 
-        /* ================= Tabs ================= */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 4px;
-            background-color: #F0F8FF;  /* Light soft background */
-            padding: 8px;
-            border-radius: 8px;
-        }
+section[data-testid="stSidebar"] button:hover,
+div.stButton > button:hover {
+    background: linear-gradient(135deg, #035b30, #035b30);
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
 
-        .stTabs [data-baseweb="tab"] {
-            padding: 8px 16px;
-            border-radius: 8px;
-            background-color: white;
-            border: 1px solid #CFE2F3;
-            color: #4178BE;
-            font-weight: 500;
-        }
 
-        .stTabs [aria-selected="true"] {
-            background: linear-gradient(135deg, #89CFF0, #70B7FF);
-            color: white !important;
-            font-weight: bold;
-            border: none;
-        }
-        .stHeader{
-            padding-top: 0 rem;
-        }
-        
-        /* ================= Main content padding ================= */
-        div.block-container {
-            padding-top: 0;
-            padding-bottom: 0;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-        }
-        /* ---------------- All Inputs ---------------- */
-        div[data-baseweb="input"],      /* Text Input */
-        div[data-baseweb="textarea"],   /* Text Area */
-        div[data-baseweb="select"]      /* Multiselect / Selectbox */
-        {
-            width: 400px;
-            margin-bottom: 10px;/* spacing between widgets */
-        }
-        div.stMarkdown {
-        margin: 0;
-        padding: 0;
-    }
-        /* Style for thin horizontal line */
+/* ================= Tabs ================= */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 4px;
+    background-color: #F0F8FF;  /* Light soft background */
+    padding: 4px;               /* reduced padding */
+    border-radius: 8px;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.stTabs [data-baseweb="tab"] {
+    padding: 4px 12px;          /* smaller padding for tight fit */
+    border-radius: 8px;
+    background-color: white;
+    border: 1px solid #CFE2F3;
+    color: #035b30;
+    font-weight: 500;
+    margin: 0 !important;
+}
+
+.stTabs [aria-selected="true"] {
+    background: linear-gradient(135deg, #035b30, #035b30);
+    color: white !important;
+    font-weight: bold;
+    border: none;
+}
+
+/* ================= Headers / Subheaders ================= */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important; /* minimal space */
+    padding: 0 !important;
+}
+
+/* ================= Main Content Container ================= */
+div.block-container {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+}
+
+/* ================= Inputs ================= */
+div[data-baseweb="input"],
+div[data-baseweb="textarea"],
+div[data-baseweb="select"] {
+    width: 400px;
+    margin-top: 0 !important;
+    margin-bottom: 10px; /* small spacing between inputs */
+}
+
+/* ================= Markdown ================= */
+div.stMarkdown {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* ================= Thin Horizontal Line ================= */
+   /* Style for thin horizontal line */
         hr.custom-hr {
         margin: 0 !important;        /* removes extra space above/below */
         padding: 0 !important;       /* removes internal padding */
-        height: 1px !important;      /* visible but thin */
-        border: none !important;     /* no default border */
-        background-color: #ccc !important;  /* gray line */
+        height: 2px !important;      /* visible but thin */
+        border: 0 !important;     /* no default border */
+        background-color: #ccc !important; 
+        width: 100%; /* gray line */
+
     }
-        
-
-

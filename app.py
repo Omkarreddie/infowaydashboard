@@ -60,13 +60,13 @@ class InfowayApp():
             login_page.login()
 
     def admin_dashboard(self):
+        css.load_login_css("css/main.css" )
         st.sidebar.markdown(
-            "<marquee behaviour='scroll' direction='left' scrollamount='5' style='color: blue; font-size:20px; font-style: italic;'>Welcome to the Infoway Dashboard!</marquee>",
+            "<marquee behaviour='scroll' direction='left' scrollamount='5' style='color: #035b30; font-size:20px; font-style: italic;'>Welcome to the Infoway Dashboard!</marquee>",
             unsafe_allow_html=True,
         )
        
-        css.load_main_css("css/main.css")
-        css.hyper_link("css/hyperlink.css")
+       
         st.header("Admin Portal")
         st.sidebar.markdown("---")
 
@@ -160,38 +160,50 @@ class InfowayApp():
 
     def dashboardgroups(self):
         st.subheader("📊 Manage Dashboard Groups")
-        css.hyper_link("css/hyperlink.css")
-        css.load_main_css("css/main.css")
+        css.hyper_link("css/hyperlink.css")  # Load CSS once
 
         # ------------------ Initialize session state ------------------
         if "dashboard_groups" not in st.session_state:
             st.session_state.dashboard_groups = load_dashboard_groups()
+
         if "add_group_page" not in st.session_state:
             st.session_state.add_group_page = False
+
         if "edit_group" not in st.session_state:
             st.session_state.edit_group = None
 
-        # Convert set to dict if needed
+        if "resp_page" not in st.session_state:
+            st.session_state.resp_page = 0
+
+        # ------------------ Convert set to dict if needed ------------------
         if isinstance(st.session_state.dashboard_groups, set):
-            st.session_state.dashboard_groups = {g: {"Description": "", "id": ""} 
-                                                for g in st.session_state.dashboard_groups}
+            st.session_state.dashboard_groups = {
+                g: {"Description": "", "id": ""} for g in st.session_state.dashboard_groups
+            }
             save_dashboard_groups(st.session_state.dashboard_groups)
 
         # ------------------ MAIN LIST PAGE ------------------
         if not st.session_state.add_group_page and st.session_state.edit_group is None:
-
             # Add Dashboard Group button
             if st.button("➕ Add Dashboard Group", key="go_add_group"):
                 st.session_state.add_group_page = True
                 st.rerun()
 
             if st.session_state.dashboard_groups:
+                # Pagination setup
+                page_size = 5
+                d_g = list(st.session_state.dashboard_groups.items())
+                t_p = (len(d_g) - 1) // page_size + 1 if d_g else 1
+                s_i = st.session_state.resp_page * page_size
+                e_i = s_i + page_size
+                p_i = d_g[s_i:e_i]
+
                 # Scrollable container
                 st.markdown('<div class="scrollable-div">', unsafe_allow_html=True)
 
                 # Header row
                 st.markdown('<div class="table-row" style="display:flex;">', unsafe_allow_html=True)
-                col1, col2, col3 = st.columns([1, 1, 2])
+                col1, col2, col3 = st.columns([0.4, 0.4, 1])
                 col1.markdown("**GROUPS**")
                 col2.markdown("**Dashboard ID**")
                 col3.markdown("**DESCRIPTION**")
@@ -199,9 +211,9 @@ class InfowayApp():
                 st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
 
                 # Data rows
-                for g, d in st.session_state.dashboard_groups.items():
+                for g, d in p_i:
                     st.markdown('<div class="table-row" style="display:flex;">', unsafe_allow_html=True)
-                    col1, col2, col3 = st.columns([1, 1, 2])
+                    col1, col2, col3 = st.columns([0.4, 0.4, 1])
                     with col1:
                         if st.button(g, key=f"edit_{g}", help="Click to edit"):
                             st.session_state.edit_group = g
@@ -212,6 +224,19 @@ class InfowayApp():
                     st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
 
                 st.markdown('</div>', unsafe_allow_html=True)
+
+                # Pagination buttons
+                p1, p3 = st.columns([1, 1])
+                with p1:
+                    if st.button("Prev") and st.session_state.resp_page > 0:
+                        st.session_state.resp_page -= 1
+                        st.rerun()
+                with p3:
+                    if st.button("Next") and st.session_state.resp_page < t_p - 1:
+                        st.session_state.resp_page += 1
+                        st.rerun()
+
+                st.markdown(f"Page {st.session_state.resp_page + 1} of {t_p}")
 
             else:
                 st.info("No dashboard groups added yet.")
@@ -224,7 +249,7 @@ class InfowayApp():
 
             # Generate Dashboard ID
             if st.session_state.dashboard_groups:
-                max_id = max([int(details.get("id", 0) or 0) 
+                max_id = max([int(details.get("id", 0) or 0)
                             for details in st.session_state.dashboard_groups.values()])
                 dashboard_id = f"{max_id + 1:04d}"
             else:
@@ -255,7 +280,8 @@ class InfowayApp():
         if st.session_state.edit_group is not None:
             g = st.session_state.edit_group
             st.subheader(f"✏️ Edit Group: {g}")
-            group_desc_safe = st.session_state.dashboard_groups.get(g, {}).get("Description", "")
+            old_id = st.session_state.dashboard_groups[g]["id"]
+            group_desc_safe = st.session_state.dashboard_groups[g].get("Description", "")
 
             new_name = st.text_input("Edit Group Name", value=g, key="edit_name_input")
             new_desc = st.text_input("Edit Description", value=group_desc_safe, key="edit_desc_input")
@@ -268,7 +294,7 @@ class InfowayApp():
                         st.session_state.dashboard_groups.pop(g)
                     st.session_state.dashboard_groups[new_name] = {
                         "Description": new_desc,
-                        "id": st.session_state.dashboard_groups.get(g, {}).get("id", "")
+                        "id": old_id
                     }
                     save_dashboard_groups(st.session_state.dashboard_groups)
                     st.success(f"✅ Group '{new_name}' updated successfully!")
@@ -282,8 +308,9 @@ class InfowayApp():
 
     def dashboard(self):
         st.subheader("🏠 Manage Dashboards")
-        css.hyper_link("css/hyperlink.css")
-        # --- Prepare dashboard groups list ---
+        css.hyper_link("css/hyperlink.css")  # Load CSS once
+
+        # ------------------ Prepare dashboard groups list ------------------
         dashboard_groups = st.session_state.get("dashboard_groups", {})
         if isinstance(dashboard_groups, dict):
             dashboard_groups_list = list(dashboard_groups.keys())
@@ -292,41 +319,68 @@ class InfowayApp():
         else:
             dashboard_groups_list = []
 
-        # --- Initialize session state flags ---
+        # ------------------ Initialize session state ------------------
         if "add_dashboard_page" not in st.session_state:
             st.session_state.add_dashboard_page = False
         if "edit_dashboard" not in st.session_state:
             st.session_state.edit_dashboard = None
+        if "d_page" not in st.session_state:
+            st.session_state.d_page = 0
 
-        # --- MAIN LIST PAGE ---
+        # ------------------ MAIN LIST PAGE ------------------
         if not st.session_state.add_dashboard_page and st.session_state.edit_dashboard is None:
             if st.button("➕ Add Dashboard", key="new_dashboard_btn"):
                 st.session_state.add_dashboard_page = True
                 st.rerun()
 
             st.subheader("Dashboards")
-            if st.session_state.dashboards:
-                cols = st.columns([2, 2, 4])
+            dashboards = st.session_state.get("dashboards", {})
+
+            if dashboards:
+                # --- Pagination setup ---
+                page_size = 5
+                d = list(dashboards.items())
+                t_p = (len(d) - 1) // page_size + 1 if d else 1
+                s_i = st.session_state.d_page * page_size
+                e_i = s_i + page_size
+                p_i = d[s_i:e_i]  # Slice for current page
+
+                # --- Header ---
+                cols = st.columns([0.3, 0.3, 1])
                 cols[0].markdown("**Dashboard Name**")
                 cols[1].markdown("**Dashboard ID**")
                 cols[2].markdown("**Groups**")
                 st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
 
-                for d_name, details in st.session_state.dashboards.items():
-                    row_cols = st.columns([2, 2, 4])
+                # --- Data rows ---
+                for d_name, details in p_i:
+                    row_cols = st.columns([0.3, 0.3, 1])
                     with row_cols[0]:
-                        # Use a unique key for each dashboard button
-                        if st.button(d_name, key=f"dashboard_btn_{d_name}",help="Click to edit"):
+                        if st.button(d_name, key=f"dashboard_btn_{d_name}", help="Click to edit"):
                             st.session_state.edit_dashboard = d_name
                             st.rerun()
                     with row_cols[1]:
-                        st.write(details["id"])
+                        st.write(details.get("id", ""))
                     with row_cols[2]:
-                        st.write(", ".join(details["groups"]))
+                        st.write(", ".join(details.get("groups", [])))
                     st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
+
+                # --- Pagination buttons ---
+                p1, p2 = st.columns([1, 1])
+                with p1:
+                    if st.button("Prev.") and st.session_state.d_page > 0:
+                        st.session_state.d_page -= 1
+                        st.rerun()
+                with p2:
+                    if st.button("Next.") and st.session_state.d_page < t_p - 1:
+                        st.session_state.d_page += 1
+                        st.rerun()
+
+                st.markdown(f"Page {st.session_state.d_page + 1} of {t_p}")
+
             else:
                 st.info("No dashboards added yet.")
-            #if st.session_state.dashboards:
+                #if st.session_state.dashboards:
              #           data = []
               #          for role, details in st.session_state.dashboards.items():
                #                              data.append({
@@ -435,7 +489,7 @@ class InfowayApp():
         if "resp_page" not in st.session_state:
             st.session_state.resp_page = 0
 
-        page_size=1
+        page_size=5
         r_l=list(st.session_state.roles_map.items())
         t_p=(len(r_l)-1)//page_size+1 if r_l else 1
         s_i=st.session_state.resp_page* page_size
@@ -455,14 +509,14 @@ class InfowayApp():
 
             st.subheader("Roles")
             if st.session_state.roles_map:
-                cols = st.columns([3, 4, 5])
+                cols = st.columns([0.3, 0.3, 1])
                 cols[0].markdown("**Role Name**")
                 cols[1].markdown("**Groups**")
                 cols[2].markdown("Role ID")
                 st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
 
                 for role, data in page_items: 
-                    row_cols = st.columns([3, 4, 5])
+                    row_cols = st.columns([0.3, 0.3, 1])
                     with row_cols[0]:
                         if st.button(role, key=f"role_btn_{role}", help="Click to edit"):
                             st.session_state.edit_role = role
@@ -473,17 +527,16 @@ class InfowayApp():
                         # Safe access for role ID
                         st.write(data.get("id"))
                     st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
-                p1, p2, p3 = st.columns([1, 2, 1])
+                p1,  p3 = st.columns([1, 1])
                 with p1:
-                    if st.button("⬅️ Prev", key="roles_prev") and st.session_state.resp_page > 0:
+                    if st.button("Prev", key="roles_prev") and st.session_state.resp_page > 0:
                         st.session_state.resp_page -= 1
                         st.rerun()
                 with p3:
-                    if st.button("Next ➡️", key="roles_next") and st.session_state.resp_page < t_p - 1:
+                    if st.button("Next", key="roles_next") and st.session_state.resp_page < t_p - 1:
                         st.session_state.resp_page += 1
                         st.rerun()
-                with p2:
-                    st.markdown(f"Page {st.session_state.resp_page + 1} of {t_p}")
+                st.markdown(f"Page {st.session_state.resp_page + 1} of {t_p}")
 
             else:
                st.info("No roles defined yet.")
@@ -642,14 +695,14 @@ class InfowayApp():
 
             st.subheader("Responsibilities")
             if page_items:
-                cols = st.columns([4, 6, 2])
+                cols = st.columns([0.5, 0.5, 1])
                 cols[0].markdown("**Responsibility**")
                 cols[1].markdown("**Roles**")
                 cols[2].markdown("ID")
                 st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
 
                 for resp, data in page_items:
-                    row_cols = st.columns([4, 6, 2])
+                    row_cols = st.columns([0.5, 0.5, 1])
                     with row_cols[0]:
                         if st.button(resp, key=f"edit_{resp}", help="Click to edit"):
                             st.session_state.edit_resp = resp
