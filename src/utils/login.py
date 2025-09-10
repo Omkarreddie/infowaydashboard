@@ -6,6 +6,7 @@ from src.utils.user_utils import load_users, save_users
 from src.utils.forgot_password_utils import generate_otp, send_email_otp
 
 
+
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -149,4 +150,4 @@ class LoginPage:
     page_title="Infoway Dashboard",
     layout="centered",   # NOT "center"
 )
-                st.rerun
+            st.rerun

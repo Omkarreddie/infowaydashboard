@@ -8,6 +8,8 @@ from src.utils.dashboard_utils import load_dashboard_groups, save_dashboard_grou
 import src.utils.dashboard as dashboards 
 import io
 import pandas as pd
+import base64
+from src.utils.css import image_to_base64
 # -------------------------- Main App Class --------------------------
 
 
@@ -64,10 +66,9 @@ class InfowayApp():
         st.sidebar.markdown(
             "<marquee behaviour='scroll' direction='left' scrollamount='5' style='color: #035b30; font-size:20px; font-style: italic;'>Welcome to the Infoway Dashboard!</marquee>",
             unsafe_allow_html=True,
-        )
-       
-       
-        st.header("Admin Portal")
+        )  
+
+
         st.sidebar.markdown("---")
 
         if "active_module" not in st.session_state:
@@ -82,13 +83,14 @@ class InfowayApp():
 
         if st.sidebar.button("🛠️ Admin Portal"):
             st.session_state.active_module = "admin"
-        
+        st.text("Welcome to Admin Portal")
         if st.session_state.active_module == "sales":
                  #   if st.session_state.role in ["admin", "salesmanager", "salesman1","salesman2"]:
-            sales_tabs=st.tabs({
-                     "📊 View Sales Chart",
-                     "📈 View Budgeting"
-                 })
+            sales_tabs = st.tabs([
+                "📊 View Sales Chart",
+                "📈 View Budgeting"
+            ])
+
             with sales_tabs[0]:
                 dashboards.show_sales_chart()
             with sales_tabs[1]:
@@ -134,6 +136,8 @@ class InfowayApp():
 
         # ========== ADMIN MODULE ==========
         elif st.session_state.active_module == "admin":
+     
+
 
             admin_tabs = st.tabs([
                 "📊 Dashboard Groups",
@@ -159,7 +163,6 @@ class InfowayApp():
                 self.manage_users()
 
     def dashboardgroups(self):
-        st.subheader("📊 Manage Dashboard Groups")
         css.hyper_link("css/hyperlink.css")  # Load CSS once
 
         # ------------------ Initialize session state ------------------
@@ -184,35 +187,41 @@ class InfowayApp():
 
         # ------------------ MAIN LIST PAGE ------------------
         if not st.session_state.add_group_page and st.session_state.edit_group is None:
-            # Add Dashboard Group button
-            if st.button("➕ Add Dashboard Group", key="go_add_group"):
-                st.session_state.add_group_page = True
-                st.rerun()
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.subheader("📊 Manage Dashboard Groups")
+            with col2:
+                if st.button("➕ Add Dashboard Group", key="go_add_group"):
+                    st.session_state.add_group_page = True
+                    st.rerun()
 
             if st.session_state.dashboard_groups:
                 # Pagination setup
                 page_size = 5
-                d_g = list(st.session_state.dashboard_groups.items())
+                search_query = st.text_input("Filter dashboard groups (By Dashboard Group or ID)").strip().lower()
+
+                if search_query:
+                    f_r = {u: d for u, d in st.session_state.dashboard_groups.items()
+                        if search_query in u.lower()
+                        or search_query in str(d.get("id", "")).lower()}
+                else:
+                    f_r = st.session_state.dashboard_groups
+
+                d_g = list(f_r.items())
                 t_p = (len(d_g) - 1) // page_size + 1 if d_g else 1
                 s_i = st.session_state.resp_page * page_size
                 e_i = s_i + page_size
                 p_i = d_g[s_i:e_i]
 
-                # Scrollable container
-                st.markdown('<div class="scrollable-div">', unsafe_allow_html=True)
-
                 # Header row
-                st.markdown('<div class="table-row" style="display:flex;">', unsafe_allow_html=True)
                 col1, col2, col3 = st.columns([0.4, 0.4, 1])
                 col1.markdown("**GROUPS**")
                 col2.markdown("**Dashboard ID**")
                 col3.markdown("**DESCRIPTION**")
-                st.markdown('</div>', unsafe_allow_html=True)
                 st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
 
                 # Data rows
                 for g, d in p_i:
-                    st.markdown('<div class="table-row" style="display:flex;">', unsafe_allow_html=True)
                     col1, col2, col3 = st.columns([0.4, 0.4, 1])
                     with col1:
                         if st.button(g, key=f"edit_{g}", help="Click to edit"):
@@ -220,10 +229,7 @@ class InfowayApp():
                             st.rerun()
                     col2.write(d.get("id", ""))
                     col3.write(d.get("Description", ""))
-                    st.markdown('</div>', unsafe_allow_html=True)
                     st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
-
-                st.markdown('</div>', unsafe_allow_html=True)
 
                 # Pagination buttons
                 p1, p3 = st.columns([1, 1])
@@ -242,7 +248,7 @@ class InfowayApp():
                 st.info("No dashboard groups added yet.")
 
         # ------------------ ADD GROUP PAGE ------------------
-        if st.session_state.add_group_page:
+        elif st.session_state.add_group_page:
             st.subheader("🆕 Add Dashboard Group")
             group_name = st.text_input("Group Name", key="new_grp_name")
             group_desc = st.text_input("Description", key="new_grp_desc")
@@ -277,7 +283,7 @@ class InfowayApp():
                 st.rerun()
 
         # ------------------ EDIT GROUP PAGE ------------------
-        if st.session_state.edit_group is not None:
+        elif st.session_state.edit_group is not None:
             g = st.session_state.edit_group
             st.subheader(f"✏️ Edit Group: {g}")
             old_id = st.session_state.dashboard_groups[g]["id"]
@@ -305,9 +311,7 @@ class InfowayApp():
                 st.session_state.edit_group = None
                 st.rerun()
 
-
     def dashboard(self):
-        st.subheader("🏠 Manage Dashboards")
         css.hyper_link("css/hyperlink.css")  # Load CSS once
 
         # ------------------ Prepare dashboard groups list ------------------
@@ -326,12 +330,17 @@ class InfowayApp():
             st.session_state.edit_dashboard = None
         if "d_page" not in st.session_state:
             st.session_state.d_page = 0
+        
 
         # ------------------ MAIN LIST PAGE ------------------
         if not st.session_state.add_dashboard_page and st.session_state.edit_dashboard is None:
-            if st.button("➕ Add Dashboard", key="new_dashboard_btn"):
-                st.session_state.add_dashboard_page = True
-                st.rerun()
+            col1,col2=st.columns([3,1])
+            with col1:
+                st.subheader("🏠 Manage Dashboards")
+            with col2:
+                if st.button("➕ Add Dashboard", key="new_dashboard_btn"):
+                    st.session_state.add_dashboard_page = True
+                    st.rerun()
 
             st.subheader("Dashboards")
             dashboards = st.session_state.get("dashboards", {})
@@ -339,20 +348,26 @@ class InfowayApp():
             if dashboards:
                 # --- Pagination setup ---
                 page_size = 5
-                d = list(dashboards.items())
+                search_query=st.text_input("Filter Dashboards(by Dashbooard or ID)").strip().lower()
+                if search_query:
+                    f_r={u:d for u , d in st.session_state.dashboards.items()
+                         if search_query in u.lower()
+                         or any (search_query in r.lower() for r in 
+                                 d.get("Dashboard Name",[]))
+                                 or search_query in str(d.get("id","")).lower()}
+                else:
+                    f_r=st.session_state.dashboards
+                d = list(f_r.items())
                 t_p = (len(d) - 1) // page_size + 1 if d else 1
                 s_i = st.session_state.d_page * page_size
                 e_i = s_i + page_size
-                p_i = d[s_i:e_i]  # Slice for current page
+                p_i = d[s_i:e_i] 
 
-                # --- Header ---
                 cols = st.columns([0.3, 0.3, 1])
                 cols[0].markdown("**Dashboard Name**")
                 cols[1].markdown("**Dashboard ID**")
                 cols[2].markdown("**Groups**")
                 st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
-
-                # --- Data rows ---
                 for d_name, details in p_i:
                     row_cols = st.columns([0.3, 0.3, 1])
                     with row_cols[0]:
@@ -364,8 +379,6 @@ class InfowayApp():
                     with row_cols[2]:
                         st.write(", ".join(details.get("groups", [])))
                     st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
-
-                # --- Pagination buttons ---
                 p1, p2 = st.columns([1, 1])
                 with p1:
                     if st.button("Prev.") and st.session_state.d_page > 0:
@@ -472,7 +485,6 @@ class InfowayApp():
 
 
     def manage_roles(self):
-        st.header("👥 Manage Roles")
         css.hyper_link("css/hyperlink.css")
 
         # --- Initialize session state ---
@@ -489,24 +501,42 @@ class InfowayApp():
         if "resp_page" not in st.session_state:
             st.session_state.resp_page = 0
 
-        page_size=5
-        r_l=list(st.session_state.roles_map.items())
-        t_p=(len(r_l)-1)//page_size+1 if r_l else 1
-        s_i=st.session_state.resp_page* page_size
-        end_idx=s_i+page_size
-        page_items=r_l[s_i:end_idx]
+        page_size = 5
+        search_query = st.text_input("Filter Roles (by Role, Group, or ID)").strip().lower()
+        if search_query:
+                st.session_state.resp_page = 0  # Reset to first page when searching
+                filtered_roles = {
+                    role: data
+                    for role, data in st.session_state.roles_map.items()
+                    if search_query in role.lower()
+                    or any(search_query in g.lower() for g in data.get("groups", []))
+                    or search_query in str(data.get("id", "")).lower()
+                }
+        else:
+            filtered_roles=st.session_state.roles_map
+            
 
-
+    # --- Search / Filter ---
+        # --- Pagination on filtered roles ---
+        filtered_list = list(filtered_roles.items())
+        t_p = max(1, (len(filtered_list) - 1) // page_size + 1)
+        start_idx = st.session_state.resp_page * page_size
+        end_idx = start_idx + page_size
+        page_items = filtered_list[start_idx:end_idx]
         # --- Combined options for groups ---
         column_names = []
         combined_options = sorted(set(st.session_state.dashboard_groups).union(column_names))
         # --- MAIN LIST PAGE ---
         # --- MAIN LIST PAGE ---
         if not st.session_state.add_role_page and st.session_state.edit_role is None:
-            if st.button("➕ Add Role", key="new_role_btn"):
-                st.session_state.add_role_page = True
-                st.rerun()
-
+            col1,col2=st.columns([1,1])
+            with col1:
+                st.header("👥 Manage Roles")
+            with col2:
+                if st.button("➕ Add Role", key="new_role_btn"):
+                    st.session_state.add_role_page = True
+                    st.rerun()
+           
             st.subheader("Roles")
             if st.session_state.roles_map:
                 cols = st.columns([0.3, 0.3, 1])
@@ -665,7 +695,6 @@ class InfowayApp():
 
 
     def manage_responsibilities(self):
-        st.header("🧩 Manage Responsibilities")
         css.hyper_link("css/hyperlink.css")
 
         # --- Initialize state ---
@@ -680,18 +709,34 @@ class InfowayApp():
         if "resp_page" not in st.session_state:
             st.session_state.resp_page = 0  # Current page number
 
+
         PAGE_SIZE = 5  # Number of items per page
         responsibilities_list = list(st.session_state.responsibilities.items())
-        total_pages = (len(responsibilities_list) - 1) // PAGE_SIZE + 1 if responsibilities_list else 1
+        total_pages = (len(responsibilities_list) - 1)// PAGE_SIZE + 1 if responsibilities_list else 1
         start_idx = st.session_state.resp_page * PAGE_SIZE
         end_idx = start_idx + PAGE_SIZE
         page_items = responsibilities_list[start_idx:end_idx]
 
         # --- MAIN LIST PAGE ---
         if not st.session_state.add_resp_page and st.session_state.edit_resp is None:
-            if st.button("➕ Add Responsibility"):
-                st.session_state.add_resp_page = True
-                st.rerun()
+            col1,col2=st.columns([1,1])
+            with col1:
+                    st.header("🧩 Manage Responsibilities")
+            with col2:
+                if st.button("➕ Add Responsibility"):
+                    st.session_state.add_resp_page = True
+                    st.rerun()
+            search_query = st.text_input("Filter users (by Responsibility, Role or ID)").strip().lower()
+
+            if search_query:
+                 filtered_responsibilities = {
+                    u: d for u, d in st.session_state.responsibilities.items()
+                    if search_query in u.lower()
+                    or any(search_query in r.lower() for r in d.get("roles", []))
+                    or search_query in str(d.get("id", "")).lower()
+                    }
+            else:
+                filtered_responsibilities = st.session_state.responsibilities
 
             st.subheader("Responsibilities")
             if page_items:
@@ -805,10 +850,9 @@ class InfowayApp():
 
 
     def manage_users(self):
-        st.header("🙋 Manage Users")
         css.hyper_link("css/hyperlink.css")
 
-        # --- 1. Initialize session state ---
+        # --- Initialize session state ---
         if "users" not in st.session_state:
             st.session_state.users = {}
         if "add_user_page" not in st.session_state:
@@ -816,113 +860,124 @@ class InfowayApp():
         if "edit_user" not in st.session_state:
             st.session_state.edit_user = None
         if "resp_page" not in st.session_state:
-            st.session_state.resp_page = 0
+                    st.session_state.resp_page = 0
 
-        # page size and items
-        p_s = 5
-        r_l = sorted(st.session_state.users.items())  # deterministic order by username
-        total_items = len(r_l)
-        # total pages (ceil division), at least 1
-        t_p = max(1, (total_items + p_s - 1) // p_s)
-
-        # ensure current page is in range
-        if st.session_state.resp_page < 0:
-            st.session_state.resp_page = 0
-        if st.session_state.resp_page > t_p - 1:
-            st.session_state.resp_page = t_p - 1
-
-        s_i = st.session_state.resp_page * p_s
-        e_i = s_i + p_s
-        p_i = r_l[s_i:e_i]  # slice for current page
-
-        # --- 2. Main list page ---
+        # --- Main list page ---
         if not st.session_state.add_user_page and st.session_state.edit_user is None:
             # Add User + Download
-            col1, col2 = st.columns([4, 1])
+            col1, col2 = st.columns([4, 2])
             with col1:
+                st.header("🙋 Manage Users")
+            with col2:
                 if st.button("➕ Add User"):
                     st.session_state.add_user_page = True
                     st.rerun()
 
             if st.session_state.users:
-                with col2:
-                    users_df = pd.DataFrame.from_dict(st.session_state.users, orient="index")
-                    users_df.reset_index(inplace=True)
-                    users_df.rename(columns={"index": "Username"}, inplace=True)
+                # --- 🔍 Search box ---
+                search_query = st.text_input("Filter users (by Username, Email, Role, or ID)").strip().lower()
 
-                    csv_buffer = io.StringIO()
-                    users_df.to_csv(csv_buffer, index=False)
-                    csv_bytes = csv_buffer.getvalue().encode("utf-8")
+                if search_query:
+                    filtered_users = {
+                        u: d for u, d in st.session_state.users.items()
+                        if search_query in u.lower()
+                        or search_query in d.get("email", "").lower()
+                        or any(search_query in r.lower() for r in d.get("roles", []))
+                        or search_query in str(d.get("id", "")).lower()
+                    }
+                else:
+                    filtered_users = st.session_state.users
+                # --- Pagination ---
+                page_size = 5
+                total_items = len(filtered_users)
+                total_pages = max(1, (total_items + page_size - 1) // page_size)
+                # Reset page if search changes
+             
 
-                    st.download_button(
-                        label="⬇️",
-                        data=csv_bytes,
-                        file_name="registered_users.csv",
-                        mime="text/csv",
-                        help="Download all registered users"
+                start = st.session_state.resp_page * page_size
+                end = start + page_size
+                page_items = list(sorted(filtered_users.items()))[start:end]
+
+                if page_items:
+                    # Scrollable container
+                    st.markdown(
+                        '<div style="max-height:400px; overflow-y:auto; padding-right:4px;">',
+                        unsafe_allow_html=True
                     )
+                    st.subheader("📋 Registered Users")
 
-            st.subheader("📋 Registered Users")
 
-            if st.session_state.users:
-                # Scrollable container
-                st.markdown(
-                    '<div style="max-height:400px; overflow-y:auto; padding-right:4px;">',
-                    unsafe_allow_html=True
-                )
+                    # Header
+                    cols = st.columns([1, 1, 1, 1, 1, 1])
+                    cols[0].markdown("**Username**")
+                    cols[1].markdown("**Responsibilities**")
+                    cols[2].markdown("**Email**")
+                    cols[3].markdown("**Inactive**")
+                    cols[4].markdown("**Admin**")
+                    cols[5].markdown("**User ID**")
 
-                # Header
-                cols = st.columns([1, 1, 1, 1, 1, 1])
-                cols[0].markdown("**Username**")
-                cols[1].markdown("**Responsibilities**")
-                cols[2].markdown("**Email**")
-                cols[3].markdown("**Inactive**")
-                cols[4].markdown("**Admin**")
-                cols[5].markdown("**User ID**")
+                    # Data rows
+                    for username, details in page_items:
+                        roles = details.get("roles", [])
+                        email = details.get("email", "")
+                        inactive = details.get("inactive", False)
+                        is_admin = details.get("is_admin", False)
 
-                # Data rows - USE THE PAGED SLICE p_i
-                for username, details in p_i:
-                    roles = details.get("roles", [])
-                    email = details.get("email", "")
-                    inactive = details.get("inactive", False)
-                    is_admin = details.get("is_admin", False)
+                        st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
+                        cols = st.columns([1, 1, 1, 1, 1, 1])
 
-                    st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
-                    cols = st.columns([1,1,1,1,1,1])
+                        with cols[0]:
+                            if st.button(username, key=f"user_{username}", help="Click to edit"):
+                                st.session_state.edit_user = username
+                                st.rerun()
 
-                    with cols[0]:
-                        if st.button(username, key=f"user_{username}", help="Click to edit"):
-                            st.session_state.edit_user = username
+                        cols[1].write(", ".join(roles))
+                        cols[2].text(email)
+                        cols[3].write("YES" if inactive else "NO")
+                        cols[4].write("YES" if is_admin else "NO")
+                        cols[5].write(details.get("id"))
+
+                    st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+                    # --- Pagination controls ---
+                    prev_col, next_col,col3 = st.columns([3, 2,1])
+
+                    with prev_col:
+                        if st.button("Prev", key="prev_page") and st.session_state.resp_page > 0:
+                            st.session_state.resp_page -= 1
                             st.rerun()
 
-                    cols[1].write(", ".join(roles))
-                    cols[2].text(email)
-                    cols[3].write("YES" if inactive else "NO")
-                    cols[4].write("YES" if is_admin else "NO")
-                    cols[5].write(details.get("id"))
+                    with next_col:
+                        if st.button("Next", key="next_page") and st.session_state.resp_page < total_pages - 1:
+                            st.session_state.resp_page += 1
+                            st.rerun()
+                    with col3:
+                         if st.session_state.users:
+                            users_df = pd.DataFrame.from_dict(st.session_state.users, orient="index")
+                            users_df.reset_index(inplace=True)
+                            users_df.rename(columns={"index": "Username"}, inplace=True)
 
-                st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
-                st.markdown('</div>', unsafe_allow_html=True)
+                            csv_buffer = io.StringIO()
+                            users_df.to_csv(csv_buffer, index=False)
+                            csv_bytes = csv_buffer.getvalue().encode("utf-8")
 
-                # ---------------- Pagination controls ----------------
-                prev_col, pages_col, next_col = st.columns([1, 1, 1])
-                with prev_col:
-                    if st.button(" Prev", key="prev_page") and st.session_state.resp_page > 0:
-                        st.session_state.resp_page -= 1
-                        st.rerun()
+                            st.download_button(
+                                label="🡇",
+                                data=csv_bytes,
+                                file_name="registered_users.csv",
+                                mime="text/csv",
+                                help="Download all registered users"
+                            )
 
 
-                with next_col:
-                    if st.button("Next", key="next_page") and st.session_state.resp_page < t_p - 1:
-                        st.session_state.resp_page += 1
-                        st.rerun()
+                    st.markdown(f"Page **{st.session_state.resp_page + 1}** of **{total_pages}**")
 
-                st.markdown(f"Page {st.session_state.resp_page + 1} of {t_p}")
-
+                else:
+                    st.warning("No users found for this search.")
             else:
                 st.info("No registered users yet.")
-
-        # --- 4. Add User Page ---
+      # --- Add User Page ---
         if st.session_state.add_user_page:
             st.subheader("🆕 Add User")
             self.createuser(is_edit=False)
@@ -930,7 +985,7 @@ class InfowayApp():
                 st.session_state.add_user_page = False
                 st.rerun()
 
-        # --- 5. Edit User Page ---
+        # --- Edit User Page ---
         if st.session_state.edit_user is not None:
             username = st.session_state.edit_user
             st.subheader(f"✏️ Edit User: {username}")
@@ -938,6 +993,7 @@ class InfowayApp():
             if st.button("⬅️ Back", key="edit_users"):
                 st.session_state.edit_user = None
                 st.rerun()
+
 
     def createuser(self, is_edit=False, username=None):
         # --- Prepare defaults ---
@@ -981,7 +1037,7 @@ class InfowayApp():
                 ])
                 resp_id = f"{max_id + 1:04d}"
             else:
-                resp_id = "0001"
+                resp_id = "0003"
 
             st.write(f"User ID: {resp_id}")
 
@@ -1019,7 +1075,8 @@ class InfowayApp():
                     "email": email_input,
                     "inactive": inactive_checkbox,
                     "is_admin": is_admin_checkbox,
-                    "last_activity": {"status": False, "date": None}
+                    "last_activity": {"status": False, "date": None},
+                    "id": resp_id   # ✅ SAVE USER ID HERE
                   
                 }
                 st.success("✅ User created successfully")
@@ -1034,7 +1091,8 @@ class InfowayApp():
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.session_state.role = ""
-        st.session_state.page="login"  # ✅ cor
+        st.session_state.page="login" 
+         # ✅ cor
         st.rerun()
 
     def user_dashboard(self):
