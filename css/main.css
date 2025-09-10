@@ -1,4 +1,12 @@
-
+ /* Hide hamburger menu */
+    #MainMenu {visibility: hidden;}
+    
+    /* Hide "Made with Streamlit" footer */
+    footer {visibility: hidden;}
+    
+    /* Optionally adjust padding if footer is hidden */
+    header {visibility: hidden;
+    color: transparent;}
 /* ================= Sidebar Buttons ================= */
 section[data-testid="stSidebar"] button,
 div.stButton > button {
@@ -23,7 +31,6 @@ div.stButton > button:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
-
 
 /* ================= Tabs ================= */
 .stTabs [data-baseweb="tab-list"] {
@@ -55,9 +62,10 @@ div.stButton > button:hover {
 /* ================= Headers / Subheaders ================= */
 h1, h2, h3, h4, h5, h6 {
     margin-top: 0 !important;
-    margin-bottom: 0 !important; /* minimal space */
+    margin-bottom: 8px !important; /* small space for readability */
     padding: 0 !important;
 }
+
 
 /* ================= Main Content Container ================= */
 div.block-container {
@@ -93,3 +101,4 @@ div.stMarkdown {
         width: 100%; /* gray line */
 
     }
+
