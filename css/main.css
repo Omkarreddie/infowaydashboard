@@ -1,12 +1,4 @@
- /* Hide hamburger menu */
-    #MainMenu {visibility: hidden;}
-    
-    /* Hide "Made with Streamlit" footer */
-    footer {visibility: hidden;}
-    
-    /* Optionally adjust padding if footer is hidden */
-    header {visibility: hidden;
-    color: transparent;}
+
 /* ================= Sidebar Buttons ================= */
 section[data-testid="stSidebar"] button,
 div.stButton > button {
@@ -92,13 +84,12 @@ div.stMarkdown {
 
 /* ================= Thin Horizontal Line ================= */
    /* Style for thin horizontal line */
-        hr.custom-hr {
-        margin: 0 !important;        /* removes extra space above/below */
-        padding: 0 !important;       /* removes internal padding */
-        height: 2px !important;      /* visible but thin */
-        border: 0 !important;     /* no default border */
-        background-color: #ccc !important; 
-        width: 100%; /* gray line */
-
-    }
+   hr.custom-hr {
+    margin: 0 !important;   /* almost no vertical spacing */
+    padding: 0 !important;
+    height: 2px !important;
+    border: 0 !important;
+    background-color: #ccc !important;
+    width: 100%;
+}
 
