@@ -44,19 +44,16 @@ class InfowayApp():
     def run(self):
         if not st.session_state.users:
             return
+
         if st.session_state.logged_in:
-            role = st.session_state.role.strip().lower()
+            user_role = st.session_state.role.strip().lower()
             
-            
-            if role == "admin":
+            if user_role == "admin":
                 self.admin_dashboard()
-            #elif role in ["user", "salesmanager", "salesman1", "salesman2",
-             #       "purchasemanager", "purchaseasst1", "purchaseasst2","View Purchase Chart"]:
-              #  self.user_dashboard()
-            elif  role:
+            elif user_role:  # This correctly handles any role that is not "admin"
                 self.user_dashboard()
             else:
-                st.warning("No dashboard found")
+                st.warning("No dashboard found for this role.")
         else:
             login_page = LoginPage()
             login_page.login()
@@ -70,12 +67,11 @@ class InfowayApp():
 
 
         st.sidebar.markdown("---")
-
+        st.header("Admin Portal")
         if "active_module" not in st.session_state:
             st.session_state.active_module = None
         
         if st.sidebar.button("Sales Module"):
-            
             st.session_state.active_module= "sales"
 
         if st.sidebar.button("📦 Purchase Module"):
@@ -83,9 +79,7 @@ class InfowayApp():
 
         if st.sidebar.button("🛠️ Admin Portal"):
             st.session_state.active_module = "admin"
-        st.text("Welcome to Admin Portal")
         if st.session_state.active_module == "sales":
-                 #   if st.session_state.role in ["admin", "salesmanager", "salesman1","salesman2"]:
             sales_tabs = st.tabs([
                 "📊 View Sales Chart",
                 "📈 View Budgeting"
@@ -214,7 +208,7 @@ class InfowayApp():
                 p_i = d_g[s_i:e_i]
 
                 # Header row
-                col1, col2, col3 = st.columns([0.4, 0.4, 1])
+                col1, col2, col3 = st.columns([0.2, 0.2, 1])
                 col1.markdown("**GROUPS**")
                 col2.markdown("**Dashboard ID**")
                 col3.markdown("**DESCRIPTION**")
@@ -222,7 +216,7 @@ class InfowayApp():
 
                 # Data rows
                 for g, d in p_i:
-                    col1, col2, col3 = st.columns([0.4, 0.4, 1])
+                    col1, col2, col3 = st.columns([0.2, 0.2, 1])
                     with col1:
                         if st.button(g, key=f"edit_{g}", help="Click to edit"):
                             st.session_state.edit_group = g
@@ -291,25 +285,26 @@ class InfowayApp():
 
             new_name = st.text_input("Edit Group Name", value=g, key="edit_name_input")
             new_desc = st.text_input("Edit Description", value=group_desc_safe, key="edit_desc_input")
-
-            if st.button("Update", key="update_group_btn"):
-                if not new_name:
-                    st.warning("Group name cannot be empty.")
-                else:
-                    if new_name != g:
-                        st.session_state.dashboard_groups.pop(g)
-                    st.session_state.dashboard_groups[new_name] = {
-                        "Description": new_desc,
-                        "id": old_id
-                    }
-                    save_dashboard_groups(st.session_state.dashboard_groups)
-                    st.success(f"✅ Group '{new_name}' updated successfully!")
+            col1,col2=st.columns([0.2,1])
+            with col1:
+                if st.button("Update", key="update_group_btn"):
+                    if not new_name:
+                        st.warning("Group name cannot be empty.")
+                    else:
+                        if new_name != g:
+                            st.session_state.dashboard_groups.pop(g)
+                        st.session_state.dashboard_groups[new_name] = {
+                            "Description": new_desc,
+                            "id": old_id
+                        }
+                        save_dashboard_groups(st.session_state.dashboard_groups)
+                        st.success(f"✅ Group '{new_name}' updated successfully!")
+                        st.session_state.edit_group = None
+                        st.rerun()
+            with col2:
+                if st.button("⬅️ Back", key="cancel_edit_group"):
                     st.session_state.edit_group = None
                     st.rerun()
-
-            if st.button("⬅️ Back", key="cancel_edit_group"):
-                st.session_state.edit_group = None
-                st.rerun()
 
     def dashboard(self):
         css.hyper_link("css/hyperlink.css")  # Load CSS once
@@ -363,13 +358,13 @@ class InfowayApp():
                 e_i = s_i + page_size
                 p_i = d[s_i:e_i] 
 
-                cols = st.columns([0.3, 0.3, 1])
+                cols = st.columns([0.2, 0.2, 1])
                 cols[0].markdown("**Dashboard Name**")
                 cols[1].markdown("**Dashboard ID**")
                 cols[2].markdown("**Groups**")
                 st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
                 for d_name, details in p_i:
-                    row_cols = st.columns([0.3, 0.3, 1])
+                    row_cols = st.columns([0.2, 0.2, 1])
                     with row_cols[0]:
                         if st.button(d_name, key=f"dashboard_btn_{d_name}", help="Click to edit"):
                             st.session_state.edit_dashboard = d_name
@@ -463,25 +458,26 @@ class InfowayApp():
                 key="edit_db_groups"
             )
             dashboard_id = st.text_input("Dashboard ID", value=details["id"], disabled=True)
-
-            if st.button("Update", key="update_dashboard_btn"):
-                if not new_name or not selected_groups:
-                    st.warning("Please provide a name and select at least one group.")
-                else:
-                    if new_name != d_name:
-                        st.session_state.dashboards.pop(d_name)
-                    st.session_state.dashboards[new_name] = {
-                        "id": dashboard_id,
-                        "groups": selected_groups
-                    }
-                    save_dashboards(st.session_state.dashboards)  # ✅ Pass the dashboards
-                    st.success(f"✅ Dashboard '{new_name}' updated successfully!")
+            col1,col2=st.columns([0.2,1])
+            with col1:
+                if st.button("Update", key="update_dashboard_btn"):
+                    if not new_name or not selected_groups:
+                        st.warning("Please provide a name and select at least one group.")
+                    else:
+                        if new_name != d_name:
+                            st.session_state.dashboards.pop(d_name)
+                        st.session_state.dashboards[new_name] = {
+                            "id": dashboard_id,
+                            "groups": selected_groups
+                        }
+                        save_dashboards(st.session_state.dashboards)  # ✅ Pass the dashboards
+                        st.success(f"✅ Dashboard '{new_name}' updated successfully!")
+                        st.session_state.edit_dashboard = None
+                        st.rerun()
+            with col2:
+                if st.button("⬅️ Back", key="cancel_edit_dashboard"):
                     st.session_state.edit_dashboard = None
                     st.rerun()
-
-            if st.button("⬅️ Back", key="cancel_edit_dashboard"):
-                st.session_state.edit_dashboard = None
-                st.rerun()
 
 
     def manage_roles(self):
@@ -539,14 +535,14 @@ class InfowayApp():
            
             st.subheader("Roles")
             if st.session_state.roles_map:
-                cols = st.columns([0.3, 0.3, 1])
+                cols = st.columns([0.25, 0.25, 1])
                 cols[0].markdown("**Role Name**")
                 cols[1].markdown("**Groups**")
                 cols[2].markdown("Role ID")
                 st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
 
                 for role, data in page_items: 
-                    row_cols = st.columns([0.3, 0.3, 1])
+                    row_cols = st.columns([0.25, 0.25, 1])
                     with row_cols[0]:
                         if st.button(role, key=f"role_btn_{role}", help="Click to edit"):
                             st.session_state.edit_role = role
@@ -673,25 +669,26 @@ class InfowayApp():
                             key=f"edit_chk_{name}"
                         ):
                             selected_dashboards.append(name)
-
-            if st.button("Update", key="update_role_btn"):
-                if not new_name or not selected_groups:
-                    st.warning("Please enter a role name and select at least one group.")
-                else:
-                    if new_name != role_to_edit:
-                        st.session_state.roles_map.pop(role_to_edit)
-                    st.session_state.roles_map[new_name] = {
-                        "groups": selected_groups,
-                        "dashboards": selected_dashboards
-                    }
-                    save_roles(st.session_state.roles_map)  # ✅ Pass the roles
-                    st.success(f"✅ Role '{new_name}' updated successfully!")
+            col1,col2=st.columns([0.2,1])
+            with col1:
+                if st.button("Update", key="update_role_btn"):
+                    if not new_name or not selected_groups:
+                        st.warning("Please enter a role name and select at least one group.")
+                    else:
+                        if new_name != role_to_edit:
+                            st.session_state.roles_map.pop(role_to_edit)
+                        st.session_state.roles_map[new_name] = {
+                            "groups": selected_groups,
+                            "dashboards": selected_dashboards
+                        }
+                        save_roles(st.session_state.roles_map)  # ✅ Pass the roles
+                        st.success(f"✅ Role '{new_name}' updated successfully!")
+                        st.session_state.edit_role = None
+                        st.rerun()
+            with col2:
+                if st.button("⬅️ Back", key="cancel_edit_role"):
                     st.session_state.edit_role = None
                     st.rerun()
-
-            if st.button("⬅️ Back", key="cancel_edit_role"):
-                st.session_state.edit_role = None
-                st.rerun()
 
 
     def manage_responsibilities(self):
@@ -740,14 +737,14 @@ class InfowayApp():
 
             st.subheader("Responsibilities")
             if page_items:
-                cols = st.columns([0.5, 0.5, 1])
+                cols = st.columns([0.3, 0.3, 1])
                 cols[0].markdown("**Responsibility**")
                 cols[1].markdown("**Roles**")
                 cols[2].markdown("ID")
                 st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
 
                 for resp, data in page_items:
-                    row_cols = st.columns([0.5, 0.5, 1])
+                    row_cols = st.columns([0.3, 0.3, 1])
                     with row_cols[0]:
                         if st.button(resp, key=f"edit_{resp}", help="Click to edit"):
                             st.session_state.edit_resp = resp
@@ -827,25 +824,26 @@ class InfowayApp():
                 default=[r for r in data.get("roles", []) if r in st.session_state.roles_map],
                 key="edit_resp_roles"
             )
-
-            if st.button("Update"):
-                if not new_name or not selected_roles:
-                    st.warning("Please enter a name and select at least one role.")
-                else:
-                    if new_name != resp_to_edit:
-                        st.session_state.responsibilities.pop(resp_to_edit)
-                    st.session_state.responsibilities[new_name] = {
-                        "id": data.get("id", resp_to_edit),
-                        "roles": selected_roles
-                    }
-                    save_responsibilities(st.session_state.responsibilities)
-                    st.success(f"✅ Responsibility '{new_name}' updated successfully!")
+            col1,col2=st.columns([0.2,1])
+            with col1:
+                if st.button("Update"):
+                    if not new_name or not selected_roles:
+                        st.warning("Please enter a name and select at least one role.")
+                    else:
+                        if new_name != resp_to_edit:
+                            st.session_state.responsibilities.pop(resp_to_edit)
+                        st.session_state.responsibilities[new_name] = {
+                            "id": data.get("id", resp_to_edit),
+                            "roles": selected_roles
+                        }
+                        save_responsibilities(st.session_state.responsibilities)
+                        st.success(f"✅ Responsibility '{new_name}' updated successfully!")
+                        st.session_state.edit_resp = None
+                        st.rerun()
+            with col2:
+                if st.button("⬅️ Back"):
                     st.session_state.edit_resp = None
                     st.rerun()
-
-            if st.button("⬅️ Back"):
-                st.session_state.edit_resp = None
-                st.rerun()
 
 
 
@@ -908,7 +906,7 @@ class InfowayApp():
 
 
                     # Header
-                    cols = st.columns([1, 1, 1, 1, 1, 1])
+                    cols = st.columns([1, 1, 1.1, 0.5, 0.5, 1])
                     cols[0].markdown("**Username**")
                     cols[1].markdown("**Responsibilities**")
                     cols[2].markdown("**Email**")
@@ -924,7 +922,7 @@ class InfowayApp():
                         is_admin = details.get("is_admin", False)
 
                         st.markdown("<hr style='margin:0;'>", unsafe_allow_html=True)
-                        cols = st.columns([1, 1, 1, 1, 1, 1])
+                        cols = st.columns([1, 1, 1.1, 0.5, 0.5, 1])
 
                         with cols[0]:
                             if st.button(username, key=f"user_{username}", help="Click to edit"):
@@ -1096,40 +1094,79 @@ class InfowayApp():
         st.rerun()
 
     def user_dashboard(self):
-        st.title("User Dashboard")
-        option = st.sidebar.radio("Select a user option", ["Home", "My Profile"], key="user_radio")
-        st.sidebar.markdown("---")
+        css.load_login_css("css/main.css")
+        st.sidebar.markdown(
+            "<marquee behaviour='scroll' direction='left' scrollamount='5' "
+            "style='color: #035b30; font-size:20px; font-style: italic;'>"
+            "Welcome to the Infoway Dashboard!</marquee>",
+            unsafe_allow_html=True,
+        )
+        username = st.session_state.username
+        user_responsibilities = st.session_state.role
+
+        st.header(f"Welcome, {username}!")
+        st.write("---")
+        if st.sidebar.button("Home"):
+            if st.button == "My Profile":
+                st.subheader("👤 My Profile")
+                st.write(f"Username: **{username}**")
+                st.write(f"Role: **{user_responsibilities}**")
+                st.write("🏢 Company: Infoway Technosoft Solutions")
+            st.sidebar.markdown("---")
+
+       
+        # Logout button
         if st.sidebar.button("🚪 Logout"):
             self.logout()
-        if st.button("Create New User"):
-            st.session_state.show_create_user_form = True
-        if st.session_state.show_create_user_form:
-            self.createuser()
-        
-        role = st.session_state.role
-        responsibilities = st.session_state.responsibilities.get(role, [])
-        if option == "Home":
-            st.write(f"Welcome User: {st.session_state.username}")
-            if responsibilities:
-                st.subheader("Your Responsibilities")
-                for resp in responsibilities:
-                    st.success(f"✅ {resp}")
-            if "View Sales Chart" in responsibilities:
-                st.subheader("Sales Dashboard")
-                dashboards.show_sales_chart()
-            if "Budgeting Access" in responsibilities:
-                st.subheader("Budgeting Section")
-                dashboards.show_budgeting_section()
-            if "View Purchase Chart" in responsibilities:
-                st.subheader("Purchase Dashboard")
-            if "View Summary" in responsibilities:
-                st.subheader("Purchase Summary")
-                dashboards.show_budgeting_section()
-        elif option == "My Profile":
-            st.write(f"Username: {st.session_state.username}")
-            st.write(f"Role: {st.session_state.role}")
-            st.write("Company: Infoway Technosoft Solutions")
+            st.success("Logout Successfully")
+            st.rerun()
 
+        # Case 1: No responsibilities at all
+        if not user_responsibilities:
+            st.warning("⚠️ No responsibilities assigned.")
+            return
+
+        # Map responsibilities → functions
+        responsibility_map = {
+            "View Sales Chart": dashboards.show_sales_chart(),
+            "Budgeting Access": dashboards.show_budgeting_section(),
+            "LPO DATA": dashboards.lpo_data(),
+            "GRN DATA": dashboards.GRN(),
+            "LPO GRN Gross Amount": dashboards.lpo_grn_gross_amount(),
+            "LPO GRN Net Values": dashboards.lpo_grn_net_values(),
+        }
+
+        # Case 2: role is a dict of responsibilities
+        if isinstance(user_responsibilities, dict):
+            grouped_resps = {}
+            for resp_name, resp_info in user_responsibilities.items():
+                for group in resp_info.get("groups", []):
+                    grouped_resps.setdefault(group, []).append(resp_name)
+
+            for group, resp_names in grouped_resps.items():
+                st.subheader(f"📂 {group}")
+                for resp in resp_names:
+                    st.success(f"✅ {resp}")
+                    func = responsibility_map.get(resp)
+                    if func:
+                        func()
+
+        # Case 3: role is just a string (like "salesmanager")
+        elif isinstance(user_responsibilities, str):
+            st.subheader("Role")
+            st.success(f"✅ {user_responsibilities}")
+
+        # Sidebar profile option
+      
+
+
+            # No modules assigned
+    
+        # Show responsibilities grouped by module
+       
+
+        # My Profile section
+    
 
 if __name__ == "__main__":
     app = InfowayApp()
