@@ -8,8 +8,6 @@ from src.utils.dashboard_utils import load_dashboard_groups, save_dashboard_grou
 import src.utils.dashboard as dashboards 
 import io
 import pandas as pd
-import base64
-from src.utils.css import image_to_base64
 # -------------------------- Main App Class --------------------------
 
 
@@ -17,9 +15,8 @@ class InfowayApp():
     def __init__(self):
         if 'logged_in' not in st.session_state:
             st.session_state.logged_in = False
-        if "show_otp_form" not in st.session_state:
-            st.session_state.show_otp_form = False
-        if "page" not in st.session_state:
+        
+        if 'page' not in st.session_state:
             st.session_state.page = "login"
         if 'username' not in st.session_state:
             st.session_state.username = ""
@@ -43,11 +40,10 @@ class InfowayApp():
             st.set_page_config(page_title="Infoway Dashboard", layout="wide")
     def run(self):
         if not st.session_state.users:
+            st.warning("NO Users Found")
             return
-
-        if st.session_state.logged_in:
-            user_role = st.session_state.role.strip().lower()
-            
+        user_role = st.session_state.role.strip().lower()
+        if st.session_state.logged_in:  
             if user_role == "admin":
                 self.admin_dashboard()
             elif user_role:  # This correctly handles any role that is not "admin"
@@ -130,9 +126,6 @@ class InfowayApp():
 
         # ========== ADMIN MODULE ==========
         elif st.session_state.active_module == "admin":
-     
-
-
             admin_tabs = st.tabs([
                 "📊 Dashboard Groups",
                 "🏠 Dashboard",
@@ -1094,80 +1087,63 @@ class InfowayApp():
         st.rerun()
 
     def user_dashboard(self):
-        css.load_login_css("css/main.css")
-        st.sidebar.markdown(
-            "<marquee behaviour='scroll' direction='left' scrollamount='5' "
-            "style='color: #035b30; font-size:20px; font-style: italic;'>"
-            "Welcome to the Infoway Dashboard!</marquee>",
-            unsafe_allow_html=True,
-        )
-        username = st.session_state.username
-        user_responsibilities = st.session_state.role
+            css.load_login_css("css/main.css")
+            st.sidebar.markdown(
+                "<marquee behaviour='scroll' direction='left' scrollamount='5' style='color: #035b30; font-size:20px; font-style: italic;'>"
+                "Welcome to the Infoway Dashboard!</marquee>", unsafe_allow_html=True
+            )
 
-        st.header(f"Welcome, {username}!")
-        st.write("---")
-        if st.sidebar.button("Home"):
-            if st.button == "My Profile":
+            username = st.session_state.username
+            user_role = st.session_state.role.strip().lower()
+
+            st.header(f"Welcome, {username}!")
+            st.markdown("---")
+            if 'home_btn_clicked' not in st.session_state:
+                st.session_state.home_btn_clicked = False
+            if 'profile_btn_clicked' not in st.session_state:
+                st.session_state.profile_btn_clicked = False
+         
+
+             # Sidebar buttons
+            home_btn = st.sidebar.button("🏠 Home")
+            profile_btn = st.sidebar.button("👤 My Profile")
+            logg_out=st.sidebar.button("Log Out")
+
+            # Update session state based on button clicks
+            if home_btn:
+                st.session_state.home_btn_clicked = True
+                st.session_state.profile_btn_clicked = False
+            elif profile_btn:
+                st.session_state.profile_btn_clicked = True
+                st.session_state.home_btn_clicked = False
+            else:
+                st.session_state.logged_Out=True
+
+            # Display content based on session state
+            if st.session_state.home_btn_clicked:
+                st.subheader("🏠 Home")
+                if user_role == "view sales chart":
+                    dashboards.show_sales_chart()
+                elif user_role == "view budget chart":
+                    dashboards.show_budgeting_section()
+                elif user_role == "view purchase chart":
+                    st.subheader("Purchase Chart")
+                    dashboards.lpo_grn_gross_amount()
+
+            if st.session_state.profile_btn_clicked:
                 st.subheader("👤 My Profile")
                 st.write(f"Username: **{username}**")
-                st.write(f"Role: **{user_responsibilities}**")
+                st.write(f"Role: **{st.session_state.role}**")
                 st.write("🏢 Company: Infoway Technosoft Solutions")
-            st.sidebar.markdown("---")
+                st.table()
 
-       
-        # Logout button
-        if st.sidebar.button("🚪 Logout"):
-            self.logout()
-            st.success("Logout Successfully")
-            st.rerun()
-
-        # Case 1: No responsibilities at all
-        if not user_responsibilities:
-            st.warning("⚠️ No responsibilities assigned.")
-            return
-
-        # Map responsibilities → functions
-        responsibility_map = {
-            "View Sales Chart": dashboards.show_sales_chart(),
-            "Budgeting Access": dashboards.show_budgeting_section(),
-            "LPO DATA": dashboards.lpo_data(),
-            "GRN DATA": dashboards.GRN(),
-            "LPO GRN Gross Amount": dashboards.lpo_grn_gross_amount(),
-            "LPO GRN Net Values": dashboards.lpo_grn_net_values(),
-        }
-
-        # Case 2: role is a dict of responsibilities
-        if isinstance(user_responsibilities, dict):
-            grouped_resps = {}
-            for resp_name, resp_info in user_responsibilities.items():
-                for group in resp_info.get("groups", []):
-                    grouped_resps.setdefault(group, []).append(resp_name)
-
-            for group, resp_names in grouped_resps.items():
-                st.subheader(f"📂 {group}")
-                for resp in resp_names:
-                    st.success(f"✅ {resp}")
-                    func = responsibility_map.get(resp)
-                    if func:
-                        func()
-
-        # Case 3: role is just a string (like "salesmanager")
-        elif isinstance(user_responsibilities, str):
-            st.subheader("Role")
-            st.success(f"✅ {user_responsibilities}")
-
-        # Sidebar profile option
-      
+            if logg_out:
+                    self.logout()
+                    st.success("Logged out successfully")
+                    st.rerun()
 
 
-            # No modules assigned
-    
-        # Show responsibilities grouped by module
-       
-
-        # My Profile section
-    
-
+        
 if __name__ == "__main__":
     app = InfowayApp()
     app.run()

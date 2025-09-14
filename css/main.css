@@ -1,5 +1,8 @@
 
 /* ================= Sidebar Buttons ================= */
+  #MainMenu {visibility: hidden;}   /* Hides the hamburger menu */
+    footer {visibility: hidden;}      /* Hides the footer */
+    header {visibility: hidden;}
 section[data-testid="stSidebar"] button,
 div.stButton > button {
     width: 190px;
