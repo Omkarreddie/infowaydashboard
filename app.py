@@ -1087,62 +1087,82 @@ class InfowayApp():
         st.rerun()
 
     def user_dashboard(self):
-            css.load_login_css("css/main.css")
-            st.sidebar.markdown(
-                "<marquee behaviour='scroll' direction='left' scrollamount='5' style='color: #035b30; font-size:20px; font-style: italic;'>"
-                "Welcome to the Infoway Dashboard!</marquee>", unsafe_allow_html=True
-            )
+       
+        css.load_main_css("css/main.css")
 
-            username = st.session_state.username
-            user_role = st.session_state.role.strip().lower()
+        # --- Sidebar welcome ---
+        st.sidebar.markdown(
+            "<marquee behaviour='scroll' direction='left' scrollamount='5' "
+            "style='color: #035b30; font-size:20px; font-style: italic;'>"
+            "Welcome to the Infoway Dashboard!</marquee>", unsafe_allow_html=True
+        )
+        if "show_home" not in st.session_state:
+           st.session_state.show_home = True   # or False, depending on your default
 
-            st.header(f"Welcome, {username}!")
-            st.markdown("---")
-            if 'home_btn_clicked' not in st.session_state:
-                st.session_state.home_btn_clicked = False
-            if 'profile_btn_clicked' not in st.session_state:
-                st.session_state.profile_btn_clicked = False
-         
+        if "show_profile" not in st.session_state:
+            st.session_state.show_profile = False
 
-             # Sidebar buttons
-            home_btn = st.sidebar.button("🏠 Home")
-            profile_btn = st.sidebar.button("👤 My Profile")
-            logg_out=st.sidebar.button("Log Out")
+        username = st.session_state.username
+        user_data = st.session_state.users.get(username, {})
+        responsibilities = user_data.get("roles", [])
+        email = user_data.get("email", "")
+        inactive = user_data.get("inactive", False)
+        user_id = user_data.get("id", "N/A")
 
-            # Update session state based on button clicks
-            if home_btn:
-                st.session_state.home_btn_clicked = True
-                st.session_state.profile_btn_clicked = False
-            elif profile_btn:
-                st.session_state.profile_btn_clicked = True
-                st.session_state.home_btn_clicked = False
+        if st.sidebar.button("Home"):
+            st.session_state.show_profile= False
+            st.session_state.show_home=True
+        if st.sidebar.button("👤 My Profile"):
+            st.session_state.show_profile = True
+            st.session_state.show_home=False
+
+        if st.sidebar.button("🚪 Log Out"):
+            self.logout()
+            st.success("Logged out successfully")
+            st.session_state.show_profile = False
+            st.rerun()
+        if st.session_state.show_home:
+            st.header(f"🏠 Welcome {username}")
+            st.write("Your dynamic dashboard modules:")
+
+            if responsibilities:
+                for resp in responsibilities:
+                    module_name = resp.lower()
+                    if module_name == "view sales chart":
+                        with st.expander("📈 Sales Chart Module"):
+                            dashboards.show_sales_chart()
+
+                    elif module_name == "view purchase chart":
+                        with st.expander("📊 Purchase Chart Module"):
+                            dashboards.lpo_grn_gross_amount()
+
+                    elif module_name == "budgeting":
+                        with st.expander("💰 Budgeting Module"):
+                            dashboards.show_budgeting_section()
+
+                    else:
+                        st.warning(f"⚠️ Responsibility '{resp}' is not mapped to any module yet.")
             else:
-                st.session_state.logged_Out=True
-
-            # Display content based on session state
-            if st.session_state.home_btn_clicked:
-                st.subheader("🏠 Home")
-                if user_role == "view sales chart":
-                    dashboards.show_sales_chart()
-                elif user_role == "view budget chart":
-                    dashboards.show_budgeting_section()
-                elif user_role == "view purchase chart":
-                    st.subheader("Purchase Chart")
-                    dashboards.lpo_grn_gross_amount()
-
-            if st.session_state.profile_btn_clicked:
-                st.subheader("👤 My Profile")
-                st.write(f"Username: **{username}**")
-                st.write(f"Role: **{st.session_state.role}**")
-                st.write("🏢 Company: Infoway Technosoft Solutions")
-                st.table()
-
-            if logg_out:
-                    self.logout()
-                    st.success("Logged out successfully")
-                    st.rerun()
+                st.info("No responsibilities assigned to you yet.")
 
 
+
+        # --- Profile Section ---
+        if st.session_state.show_profile:
+            st.subheader("👤 My Profile")
+            st.write(f"**Username:** {username}")
+            st.write(f"**Responsibilities:** {', '.join(responsibilities) if responsibilities else 'No responsibilities'}")
+            st.write("🏢 **Company:** Infoway Technosoft Solutions")
+
+            profile_df = pd.DataFrame([{
+                "Email": email,
+                "Inactive": "YES" if inactive else "NO",
+                "User ID": user_id
+            }])
+            st.table(profile_df)
+
+        # --- Dynamic Dashboard Section ---
+        
         
 if __name__ == "__main__":
     app = InfowayApp()
