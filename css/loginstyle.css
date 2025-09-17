@@ -1,3 +1,6 @@
+#mainmenu{visibility: hidden;}
+footer{visibility: hidden;}
+header{visibility: hidden;}
 .stApp {
     background: #e3fde9;
 }

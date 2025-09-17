@@ -1040,16 +1040,22 @@ class InfowayApp():
                 return
 
             if is_edit:
-                # Update existing user
-                if password_input:
-                    hashed_pw = hash_password(password_input)
-                    st.session_state.users[username]["password"] = hashed_pw
-                st.session_state.users[username]["email"] = email_input
-                st.session_state.users[username]["roles"] = roles_input
-                st.session_state.users[username]["inactive"] = inactive_checkbox
-                st.session_state.users[username]["is_admin"] = is_admin_checkbox
-                st.success("✅ User updated successfully")
-                st.session_state.edit_user = None
+                if username=="admin":
+                    st.session_state.users[username]["email"] = email_input
+                    st.session_state.users[username]["roles"] = roles_input
+                    st.success("Admin Updated Successfully")
+                    st.session_state.edit_user= None
+
+                else:
+                    if password_input:
+                        hashed_pw = hash_password(password_input)
+                        st.session_state.users[username]["password"] = hashed_pw
+                    st.session_state.users[username]["email"] = email_input
+                    st.session_state.users[username]["roles"] = roles_input
+                    st.session_state.users[username]["inactive"] = inactive_checkbox
+                    st.session_state.users[username]["is_admin"] = is_admin_checkbox
+                    st.success("✅ User updated successfully")
+                    st.session_state.edit_user = None
             else:
                 # Create new user
                 if username_input in st.session_state.users:
@@ -1058,6 +1064,7 @@ class InfowayApp():
                 if not password_input:
                     st.error("Password is required for new users")
                     return
+                
 
                 hashed_pw = hash_password(password_input)
                 st.session_state.users[username_input] = {
@@ -1140,30 +1147,26 @@ class InfowayApp():
                         with st.expander("💰 Budgeting Module"):
                             dashboards.show_budgeting_section()
 
+                    elif module_name=="View Grn Data":
+                        with st.expander("Purchase Module"):
+                             dashboards.lpo_data()
+
                     else:
                         st.warning(f"⚠️ Responsibility '{resp}' is not mapped to any module yet.")
             else:
                 st.info("No responsibilities assigned to you yet.")
-
-
-
         # --- Profile Section ---
-        if st.session_state.show_profile:
+        if st.session_state.show_profile :
             st.subheader("👤 My Profile")
             st.write(f"**Username:** {username}")
             st.write(f"**Responsibilities:** {', '.join(responsibilities) if responsibilities else 'No responsibilities'}")
             st.write("🏢 **Company:** Infoway Technosoft Solutions")
 
-            profile_df = pd.DataFrame([{
+            profile_df = pd.DataFrame([{ 
                 "Email": email,
-                "Inactive": "YES" if inactive else "NO",
                 "User ID": user_id
             }])
-            st.table(profile_df)
-
-        # --- Dynamic Dashboard Section ---
-        
-        
+            st.table(profile_df)        
 if __name__ == "__main__":
     app = InfowayApp()
     app.run()
