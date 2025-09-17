@@ -40,8 +40,9 @@ class LoginPage:
             f"<img src='data:image/jpg;base64,{image_to_base64('images/logo.jpg')}' class='login-logo'>",
             unsafe_allow_html=True
         )
+      
         st.markdown(
-            "<div class='login-title'>Infoway Technosoft Solutions PVT LTD</div>",
+            "<div class='login-title'>Infoway Technosoft Solutions Pvt ltd</div>",
             unsafe_allow_html=True
         )
 
@@ -147,13 +148,14 @@ class LoginPage:
                             st.session_state.show_forgot_form = False
                             st.session_state.otp = None
                             st.session_state.reset_email = None
+                            st.rerun()
                         else:
                             st.error("Passwords do not match")
                     else:
                         st.error("Invalid OTP")
 
             with col2:
-                if st.button("⬅️ Back"):
+                if st.button("⬅️ Back", key="back_btn"):
                     st.session_state.show_otp_form = False
                     st.session_state.show_forgot_form = False
                     st.session_state.otp = None
