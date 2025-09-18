@@ -1148,7 +1148,7 @@ class InfowayApp():
                             dashboards.show_budgeting_section()
 
                     elif module_name=="View Grn Data":
-                        with st.expander("Purchase Module"):
+                        with st.expander("📊 Purchase Module"):
                              dashboards.lpo_data()
 
                     else:
