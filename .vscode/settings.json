@@ -1,0 +1,17 @@
+{
+    "python.analysis.enableAsyncProgram": false,
+    "python.analysis.fixAll": [
+
+    ],
+    "python.analysis.extraPaths": [
+    " c:/users/omkar/streamlit-app/venv/libsite-packages "
+],
+"python.analysis.aiCodeActions": {
+    
+    "implementAbstractClasses": true,
+    "generateSymbol": true,
+    "convertFormatString": true
+}
+    
+}
+
