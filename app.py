@@ -1,21 +1,22 @@
 import streamlit as st
-from src.utils.login import LoginPage,hash_password
+from src.utils.login import LoginPage, hash_password
 import src.utils.css as css
 from src.utils.user_utils import load_users, save_users
 from src.utils.role_utils import load_roles, save_roles
 from src.utils.responsibility_utils import load_responsibilities, save_responsibilities
-from src.utils.dashboard_utils import load_dashboard_groups, save_dashboard_groups,load_dashboards, save_dashboards
-import src.utils.dashboard as dashboards 
+from src.utils.dashboard_utils import load_dashboard_groups, save_dashboard_groups, load_dashboards, save_dashboards
+import src.utils.dashboard as dashboards
+from src.utils.jwt_utils import verify_token  # NEW
+
 import io
 import pandas as pd
-# -------------------------- Main App Class --------------------------
 
 
 class InfowayApp():
     def __init__(self):
+        # ---------------- INIT SESSION STATE ----------------
         if 'logged_in' not in st.session_state:
             st.session_state.logged_in = False
-        
         if 'page' not in st.session_state:
             st.session_state.page = "login"
         if 'username' not in st.session_state:
@@ -31,28 +32,48 @@ class InfowayApp():
         if 'roles_map' not in st.session_state:
             st.session_state.roles_map = load_roles()
         if 'dashboard_groups' not in st.session_state:
-            st.session_state.dashboard_groups=load_dashboard_groups()
+            st.session_state.dashboard_groups = load_dashboard_groups()
         if 'dashboards' not in st.session_state:
-            st.session_state.dashboards=load_dashboards()
+            st.session_state.dashboards = load_dashboards()
+
+        # ---------------- SSO HANDLING ----------------
         if not st.session_state.get("logged_in", False):
-                st.set_page_config(page_title="Infoway Login", layout="centered")
+            token = st.session_state.get("token", [None])[0]
+
+            if token:
+                payload = verify_token(token)
+                if payload:
+                    st.session_state.logged_in = True
+                    st.session_state.username = payload["sub"]
+                    st.session_state.role = payload.get("role", "user")
+                    st.session_state.page = "dashboard"
+
+        # ---------------- PAGE CONFIG ----------------
+        if not st.session_state.get("logged_in", False):
+            st.set_page_config(page_title="Infoway Login", layout="centered")
         else:
             st.set_page_config(page_title="Infoway Dashboard", layout="wide")
+
     def run(self):
         if not st.session_state.users:
             st.warning("NO Users Found")
             return
+
         user_role = st.session_state.role.strip().lower()
-        if st.session_state.logged_in:  
+
+        if st.session_state.logged_in:
             if user_role == "admin":
                 self.admin_dashboard()
-            elif user_role:  # This correctly handles any role that is not "admin"
+            elif user_role:
                 self.user_dashboard()
             else:
                 st.warning("No dashboard found for this role.")
         else:
             login_page = LoginPage()
             login_page.login()
+
+    # keep rest of your code (admin_dashboard, user_dashboard, etc.) unchanged
+
 
     def admin_dashboard(self):
         css.load_login_css("css/main.css" )
