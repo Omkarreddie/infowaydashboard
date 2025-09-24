@@ -1,8 +1,8 @@
 
 /* ================= Sidebar Buttons ================= */
-#mainmenu{visibility: hidden !important;}
-header{visibility: hidden;}
-footer{visibility: hidden;}
+#mainmenu{visibility: none;}
+footer{visibility: none;}
+header{visibility: none;}
 
 section[data-testid="stSidebar"] button,
 div.stButton > button {
@@ -13,7 +13,7 @@ div.stButton > button {
     border-radius: 16px;
     color: white !important;
     border: none;
-    background: linear-gradient(135deg, #035b30, #035b30);
+    background: linear-gradient(135deg, #035b30, #048c54);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease-in-out;
     margin-top: 0 !important;
@@ -22,7 +22,7 @@ div.stButton > button {
 
 section[data-testid="stSidebar"] button:hover,
 div.stButton > button:hover {
-    background: linear-gradient(135deg, #035b30, #035b30);
+    background: linear-gradient(135deg, #035b30, #048c4b); /* second stop is a lighter green */
     color: white !important;
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
@@ -56,9 +56,39 @@ div.stButton > button:hover {
 }
 
 /* ================= Headers / Subheaders ================= */
-h1, h2, h3, h4, h5, h6 {
+h1 {
     margin-top: 0 !important;
-    margin-bottom: 8px !important; /* small space for readability */
+    margin-bottom: 24px !important; /* more space for main header */
+    padding: 0 !important;
+}
+
+h2 {
+    margin-top: 0 !important;
+    margin-bottom: 20px !important;
+    padding: 0 !important;
+}
+
+h3 {
+    margin-top: 0 !important;
+    margin-bottom: 16px !important;
+    padding: 0 !important;
+}
+
+h4 {
+    margin-top: 0 !important;
+    margin-bottom: 12px !important;
+    padding: 0 !important;
+}
+
+h5 {
+    margin-top: 0 !important;
+    margin-bottom: 8px !important;
+    padding: 0 !important;
+}
+
+h6 {
+    margin-top: 0 !important;
+    margin-bottom: 4px !important;
     padding: 0 !important;
 }
 
@@ -77,7 +107,7 @@ div[data-baseweb="textarea"],
 div[data-baseweb="select"] {
     width: 400px;
     margin-top: 0 !important;
-    margin-bottom: 10px; /* small spacing between inputs */
+    margin-bottom: 10px !important; /* small spacing between inputs */
 }
 
 /* ================= Markdown ================= */
@@ -91,9 +121,9 @@ div.stMarkdown {
    hr.custom-hr {
     margin: 0 !important;   /* almost no vertical spacing */
     padding: 0 !important;
-    height: 2px !important;
     border: 0 !important;
-    background-color: #ccc !important;
+    border-top: 2px solid #ccc !important;
+    background-color: transparent !important;
     width: 100%;
 }
 
