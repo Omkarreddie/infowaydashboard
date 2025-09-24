@@ -3,34 +3,66 @@ import streamlit as st
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
-
-
+# ---------------- SALES DASHBOARD ----------------
 def show_sales_chart():
-        
-        st.subheader("Sales Data Charts")
-        if not os.path.exists("data/sales_data.csv"):
-            st.error("Your file does not exist")
-            return
-        df = pd.read_csv("data/sales_data.csv")
-        st.dataframe(df)
-        st.bar_chart(data=df, x="City", y="Total")
-        data = {'Name': ['Omkar', 'Lakshman', 'Ajay'], 'Sales': [24, 25, 23], 'Location': ['Nellore', 'Chennai', 'Hyderabad']}
-        df_chart = pd.DataFrame(data)
-        st.title("Sales")
-        fig, ax = plt.subplots()
-        ax.bar(df_chart["Name"], df_chart["Sales"], color="blue")
-        ax.set_title("Sales by Person")
-        ax.set_xlabel("Name")
-        ax.set_ylabel("Sales")
-        st.pyplot(fig)
+    st.subheader("📊 Sales Data")
 
+    if not os.path.exists("data/sales_data.csv"):
+        st.error("⚠️ sales_data.csv not found")
+        return
+
+    df = pd.read_csv("data/sales_data.csv")
+
+
+    # Filters
+    cities = st.multiselect("Filter by City", options=sorted(df["City"].unique()), default=[],placeholder="Choose cities")
+    df = df[df["City"].isin(cities)]
+
+    # Chart selector
+    chart_type = st.radio("Select Chart Type", ["Bar", "Line", "Area"], horizontal=True)
+
+    st.write("### Filtered Sales Data")
+    st.dataframe(df)
+
+    if chart_type == "Bar":
+        st.bar_chart(df.set_index("City")["Total"])
+    elif chart_type == "Line":
+        st.line_chart(df.set_index("City")["Total"])
+    elif chart_type == "Area":
+        st.area_chart(df.set_index("City")["Total"])
+
+    # KPIs
+    col1, col2 = st.columns(2)
+    col1.metric("Total Sales", f"{df['Total'].sum():,.0f}")
+    col2.metric("Avg Sales per City", f"{df['Total'].mean():,.0f}")
+
+    # Download filtered CSV
+    st.download_button(
+        "⬇ Download Filtered Sales",
+        df.to_csv(index=False).encode("utf-8"),
+        "filtered_sales.csv",
+        "text/csv"
+    )
+
+
+# ---------------- BUDGETING DASHBOARD ----------------
 def show_budgeting_section():
-        
-        st.write("📋 This is the budgeting area.")
-        budget_data = {"Department": ["Sales", "Marketing", "HR"], "Budget": [150000, 100000, 80000]}
-        df_budget = pd.DataFrame(budget_data)
-        st.dataframe(df_budget)
-        st.bar_chart(df_budget.set_index("Department"))
+    st.subheader("💰 Budgeting Dashboard")
+    budget_data = {"Department": ["Sales", "Marketing", "HR"], "Budget": [150000, 100000, 80000]}
+    df = pd.DataFrame(budget_data)
+
+    st.dataframe(df)
+
+    # User choice
+    chart_type = st.radio("Chart Type", ["Bar", "Pie"], horizontal=True)
+
+    if chart_type == "Bar":
+        st.bar_chart(df.set_index("Department"))
+    else:
+        fig, ax = plt.subplots()
+        ax.pie(df["Budget"], labels=df["Department"], autopct="%1.1f%%")
+        ax.set_title("Budget Distribution")
+        st.pyplot(fig)
 def load_purchase_data(file_path="data/lpo_data.csv"):
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Purchase file not found: {file_path}")
