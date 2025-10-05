@@ -2,15 +2,14 @@
 import streamlit as st
 import oracledb
 import pandas as pd
-import os
 
 # ---------------- CONFIG ----------------
 ORACLE_CONFIG = {
-    "user": "omkar_training",
+    "user": "omkar_python",
     "password":"log",
     "dsn": "172.16.16.152:1521/orcl"
 }
-st.set_page_config(page_title="Oracle SSO Dashboard", layout="wide")
+st.set_page_config(page_title="Databse Connection", layout="wide")
 st.title("Oracle SSO Dashboard")
 
 # ---------------- LOGIN CHECK ----------------
@@ -26,7 +25,7 @@ try:
     conn = oracledb.connect(**ORACLE_CONFIG)
     st.success("Connected to Oracle DB successfully!")
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM axpdc")
+    cursor.execute("SELECT * FROM axusers")
     columns = [col[0] for col in cursor.description]
     rows = cursor.fetchall()
     df = pd.DataFrame(rows, columns=columns)
